@@ -1,56 +1,44 @@
-import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import Loading from "../../components/Loading";
-import ErrorBox from "../../components/ErrorBox";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { jobService } from "../../services/jobService";
-import { useAuth } from "../../contexts/AuthContext";
 
 export default function JobDetailPublic() {
-    const { jobId } = useParams();
-    const { user } = useAuth();
+    const { id } = useParams();
     const [job, setJob] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
 
     useEffect(() => {
-        const run = async () => {
-            setLoading(true);
-            setError(null);
+        const fetchJob = async () => {
             try {
-                const data = await jobService.get(jobId);
+                const data = await jobService.getById(id);
                 setJob(data);
-            } catch (e) {
-                setError(e);
+            } catch (error) {
+                console.error(error);
             } finally {
                 setLoading(false);
             }
         };
-        run();
-    }, [jobId]);
 
-    if (loading) return <Loading />;
+        fetchJob();
+    }, [id]);
+
+    if (loading) return <p className="p-6">Loading job...</p>;
+    if (!job) return <p className="p-6">Job not found.</p>;
+
     return (
-        <div className="row">
-            <ErrorBox error={error} />
-            {job && (
-                <div className="card">
-                    <div className="h1">{job.title}</div>
-                    <div className="muted">Budget: {job.budget} | Status: <span className="badge">{job.status || "open"}</span></div>
-                    <hr className="hr" />
-                    <div style={{ whiteSpace: "pre-wrap" }}>{job.description}</div>
+        <div className="p-6 max-w-3xl mx-auto">
+            <h1 className="text-2xl font-bold mb-4">{job.title}</h1>
 
-                    <hr className="hr" />
-                    {user?.role === "Freelancer" ? (
-                        <Link className="btn" to="/freelancer/proposals" state={{ createForJob: job }}>
-                            Submit proposal
-                        </Link>
-                    ) : (
-                        <div className="muted">
-                            Login as <b>Freelancer</b> to submit a proposal.
-                        </div>
-                    )}
-                </div>
-            )}
+            <p className="text-gray-700 mb-4">{job.description}</p>
+
+            <div className="bg-gray-100 p-4 rounded">
+                <p>
+                    <strong>Budget:</strong> ${job.budget}
+                </p>
+                <p>
+                    <strong>Category:</strong> {job.category}
+                </p>
+            </div>
         </div>
     );
 }
