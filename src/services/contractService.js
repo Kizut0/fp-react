@@ -7,10 +7,12 @@ export const contractService = {
     return data;
   },
 
+  async list() {
+    return this.getAll();
+  },
+
   async complete(id) {
-    const { data } = await apiClient.patch(
-      `${endpoints.CONTRACTS}/${id}/complete`
-    );
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/complete`);
     return data;
   },
 };
