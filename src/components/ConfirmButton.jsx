@@ -1,21 +1,41 @@
+
+import { useState } from "react";
+
 export default function ConfirmButton({
-  onConfirm,
   children,
+  onConfirm,
   confirmMessage = "Are you sure?",
   className = "",
+  disabled = false,
 }) {
-  const handleClick = () => {
-    if (window.confirm(confirmMessage)) {
-      onConfirm();
+  const [loading, setLoading] = useState(false);
+
+  const handleClick = async () => {
+    if (loading || disabled) return;
+
+    const confirmed = window.confirm(confirmMessage);
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      await onConfirm();
+    } catch (error) {
+      console.error("Action failed:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <button
       onClick={handleClick}
-      className={`bg-red-600 text-white px-3 py-1 rounded ${className}`}
+      disabled={loading || disabled}
+      className={`px-4 py-2 rounded text-white transition ${loading || disabled
+          ? "bg-gray-400 cursor-not-allowed"
+          : "bg-red-600 hover:bg-red-700"
+        } ${className}`}
     >
-      {children}
+      {loading ? "Processing..." : children}
     </button>
   );
 }
