@@ -232,8 +232,8 @@ export default function Register() {
             type="submit"
             disabled={!validation.canSubmit}
             className={`w-full py-2 rounded text-white ${!validation.canSubmit
-              ? "bg-gray-400"
-              : "bg-blue-600 hover:bg-blue-700"
+                ? "bg-gray-400"
+                : "bg-blue-600 hover:bg-blue-700"
               }`}
           >
             {loading ? "Creating account..." : "Register"}
