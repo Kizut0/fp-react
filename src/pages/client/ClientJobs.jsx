@@ -1,103 +1,95 @@
-import React, { useEffect, useState } from "react";
-
-import { Link, useNavigate } from "react-router-dom";
-
-import Loading from "../../components/Loading";
-
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import ErrorBox from "../../components/ErrorBox";
-
-import ConfirmButton from "../../components/ConfirmButton";
-
+import Loading from "../../components/Loading";
+import { useAuth } from "../../contexts/AuthContext";
 import { jobService } from "../../services/jobService";
 
 export default function ClientJobs() {
-
-  const nav = useNavigate();
+  const { user } = useAuth();
 
   const [items, setItems] = useState([]);
-
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [err, setErr] = useState(null);
+  const myJobs = useMemo(() => {
+    const myId = String(user?._id || user?.id || "");
+    if (!myId) return items;
+    return items.filter((job) => String(job.clientId || "") === myId);
+  }, [items, user]);
 
   const load = async () => {
-
-    setLoading(true); setErr(null);
-
+    setLoading(true);
+    setError("");
     try {
-
-      const data = await jobService.list("mine=1");
-
-      setItems(data?.items || data || []);
-
+      const data = await jobService.getAll();
+      setItems(Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []);
     } catch (e) {
-
-      setErr(e);
-
+      setError(e?.response?.data?.message || e?.message || "Failed to load jobs");
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
-  useEffect(() => { load(); }, []);
-
-  const remove = async (id) => {
-
-    await jobService.remove(id);
-
-    await load();
-
-  };
+  useEffect(() => {
+    load();
+  }, []);
 
   if (loading) return <Loading />;
 
   return (
     <div className="row">
-      <div className="card" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-        <div>
-          <div className="h1">My Jobs</div>
-          <div className="muted">Create and manage your job posts.</div>
-        </div>
-        <button className="btn" onClick={() => nav("/client/jobs/new")}>+ New Job</button>
+      <div className="card">
+        <div className="h1">My Jobs</div>
+        <div className="muted">Create and manage your job posts.</div>
       </div>
 
-      <ErrorBox error={err} />
+      <ErrorBox message={error} />
 
       <div className="card">
-        <table className="table">
-          <thead>
-            <tr><th>Title</th><th>Budget</th><th>Status</th><th style={{ width: 260 }}>Actions</th></tr>
-          </thead>
-          <tbody>
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="h2">Job Posts</div>
+            <div className="muted">Total: {myJobs.length}</div>
+          </div>
+          <Link to="/client/jobs/new" className="btn btnOk">
+            + Create Job
+          </Link>
+        </div>
+      </div>
 
-            {items.map((j) => {
-
-              const id = j._id || j.jobId;
-
-              return (
-                <tr key={id}>
-                  <td><Link to={`/client/jobs/${id}`} style={{ textDecoration: "underline" }}>{j.title}</Link></td>
-                  <td>{j.budget}</td>
-                  <td><span className="badge">{j.status || "open"}</span></td>
-                  <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button className="btn btnGhost" onClick={() => nav(`/client/jobs/${id}/edit`)}>Edit</button>
-                    <ConfirmButton onConfirm={() => remove(id)} confirmText="Delete this job?">Delete</ConfirmButton>
+      <div className="card">
+        {myJobs.length === 0 ? (
+          <p className="muted">No jobs yet. Click "Create Job" to post your first project.</p>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Budget</th>
+                <th>Status</th>
+                <th style={{ width: 140 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {myJobs.map((job) => (
+                <tr key={job._id || job.jobId}>
+                  <td>{job.title}</td>
+                  <td>${job.budget}</td>
+                  <td>
+                    <span className="badge">{job.status || "open"}</span>
+                  </td>
+                  <td>
+                    <Link to={`/client/jobs/${job._id || job.jobId}/edit`} className="btn">
+                      Edit
+                    </Link>
                   </td>
                 </tr>
-
-              );
-
-            })}
-
-            {items.length === 0 && <tr><td colSpan="4" className="muted">No jobs yet.</td></tr>}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
-
   );
-
 }
