@@ -42,6 +42,7 @@ export function AuthProvider({ children }) {
         setUser(res.user);
         localStorage.setItem(LS_TOKEN, res.token);
         localStorage.setItem(LS_USER, JSON.stringify(res.user));
+        return res;
     };
 
     const register = async ({ name, email, password, role }) => {
@@ -50,6 +51,7 @@ export function AuthProvider({ children }) {
         setUser(res.user);
         localStorage.setItem(LS_TOKEN, res.token);
         localStorage.setItem(LS_USER, JSON.stringify(res.user));
+        return res;
     };
 
     const logout = () => {
