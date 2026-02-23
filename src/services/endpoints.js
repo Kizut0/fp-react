@@ -5,6 +5,7 @@ const endpoints = {
     ME: "/auth/me",
   },
 
+  USERS: "/users",
   JOBS: "/jobs",
   PROPOSALS: "/proposals",
   CONTRACTS: "/contracts",

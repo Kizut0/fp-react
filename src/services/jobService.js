@@ -1,9 +1,26 @@
 import apiClient from "./apiClient";
 import endpoints from "./endpoints";
 
+function buildQueryString(filters = {}) {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, rawValue]) => {
+    if (rawValue === undefined || rawValue === null) return;
+
+    const value = typeof rawValue === "string" ? rawValue.trim() : rawValue;
+    if (value === "" || value === "all") return;
+
+    params.set(key, String(value));
+  });
+
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export const jobService = {
-  async getAll() {
-    const { data } = await apiClient.get(endpoints.JOBS);
+  async getAll(filters = {}) {
+    const suffix = buildQueryString(filters);
+    const { data } = await apiClient.get(`${endpoints.JOBS}${suffix}`);
     return data;
   },
 

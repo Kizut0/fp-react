@@ -1,20 +1,25 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { reviewService } from "../../services/reviewService";
-import apiClient from "../../services/apiClient";
+import { userService } from "../../services/userService";
 
 export default function FreelancerProfilePublic() {
-    const { id } = useParams();
+    const { freelancerId, id } = useParams();
+    const resolvedFreelancerId = freelancerId || id;
     const [freelancer, setFreelancer] = useState(null);
     const [reviews, setReviews] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
-            try {
-                const userRes = await apiClient.get(`/users/${id}`);
-                setFreelancer(userRes.data);
+            if (!resolvedFreelancerId) {
+                return;
+            }
 
-                const reviewData = await reviewService.getByUser(id);
+            try {
+                const userData = await userService.getById(resolvedFreelancerId);
+                setFreelancer(userData);
+
+                const reviewData = await reviewService.getByUser(resolvedFreelancerId);
                 setReviews(reviewData);
             } catch (error) {
                 console.error(error);
@@ -22,7 +27,7 @@ export default function FreelancerProfilePublic() {
         };
 
         fetchData();
-    }, [id]);
+    }, [resolvedFreelancerId]);
 
     if (!freelancer) return <p className="p-6">Loading profile...</p>;
 
