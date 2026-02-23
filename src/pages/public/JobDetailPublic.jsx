@@ -24,6 +24,11 @@ function formatDate(value) {
   }).format(date);
 }
 
+function getPostedAt(job) {
+  if (!job || typeof job !== "object") return null;
+  return job.createdAt || job.postedAt || job.postedDate || job.date || null;
+}
+
 export default function JobDetailPublic() {
   const { jobId, id } = useParams();
   const resolvedJobId = jobId || id;
@@ -74,7 +79,7 @@ export default function JobDetailPublic() {
               {job.title}
             </h1>
             <div className="muted" style={{ marginTop: 8 }}>
-              Posted {formatDate(job.createdAt)}
+              Posted {formatDate(getPostedAt(job))}
             </div>
           </div>
           <div className="text-right">

@@ -141,7 +141,7 @@ export default function ClientJobs() {
                 <th>Posted</th>
                 <th>Proposals</th>
                 <th>Status</th>
-                <th style={{ width: 140 }}>Actions</th>
+                <th style={{ width: 220 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -156,9 +156,14 @@ export default function ClientJobs() {
                     <span className="badge">{job.status || "open"}</span>
                   </td>
                   <td>
-                    <Link to={`/client/jobs/${job._id || job.jobId}/edit`} className="btn">
-                      Edit
-                    </Link>
+                    <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+                      <Link to={`/client/jobs/${job._id || job.jobId}`} className="btn">
+                        View
+                      </Link>
+                      <Link to={`/client/jobs/${job._id || job.jobId}/edit`} className="btn">
+                        Edit
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
