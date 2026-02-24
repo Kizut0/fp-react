@@ -230,8 +230,8 @@ export default function Register() {
 
           <button
             type="submit"
-            disabled={!validation.canSubmit}
-            className={`w-full py-2 rounded text-white ${!validation.canSubmit
+            disabled={loading}
+            className={`w-full py-2 rounded text-white ${loading
                 ? "bg-gray-400"
                 : "bg-blue-600 hover:bg-blue-700"
               }`}

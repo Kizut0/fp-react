@@ -3,6 +3,25 @@ import Loading from "../../components/Loading";
 import ErrorBox from "../../components/ErrorBox";
 import { adminService } from "../../services/adminService";
 
+function normalizeStatus(value, fallback = "unknown") {
+    const raw = String(value || fallback).trim().toLowerCase();
+    return raw || fallback;
+}
+
+function formatDateTime(value) {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    }).format(date);
+}
+
 export default function AdminPayments() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -28,7 +47,7 @@ export default function AdminPayments() {
             <ErrorBox error={err} />
             <div className="card">
                 <table className="table">
-                    <thead><tr><th>Contract</th><th>Client</th><th>Freelancer</th><th>Amount</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Contract</th><th>Client</th><th>Freelancer</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
                     <tbody>
                         {items.map((p) => (
                             <tr key={p._id || p.paymentId}>
@@ -36,10 +55,11 @@ export default function AdminPayments() {
                                 <td>{p.clientName || p.clientId}</td>
                                 <td>{p.freelancerName || p.freelancerId}</td>
                                 <td>{p.amount}</td>
-                                <td><span className="badge">{p.paymentStatus}</span></td>
+                                <td><span className="badge">{normalizeStatus(p.status || p.paymentStatus)}</span></td>
+                                <td className="muted">{formatDateTime(p.createdAt || p.paymentDate || p.updatedAt)}</td>
                             </tr>
                         ))}
-                        {items.length === 0 && <tr><td colSpan="5" className="muted">No payments.</td></tr>}
+                        {items.length === 0 && <tr><td colSpan="6" className="muted">No payments.</td></tr>}
                     </tbody>
                 </table>
             </div>

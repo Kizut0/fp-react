@@ -1,6 +1,20 @@
 import apiClient from "./apiClient";
 import endpoints from "./endpoints";
 
+function toQueryString(query = "") {
+  if (!query) return "";
+  if (typeof query === "string") return query ? `?${query}` : "";
+
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    params.set(key, String(value));
+  });
+
+  const serialized = params.toString();
+  return serialized ? `?${serialized}` : "";
+}
+
 export const reviewService = {
   async create(reviewData) {
     const { data } = await apiClient.post(endpoints.REVIEWS, reviewData);
@@ -8,13 +22,13 @@ export const reviewService = {
   },
 
   async list(query = "") {
-    const suffix = query ? `?${query}` : "";
+    const suffix = toQueryString(query);
     const { data } = await apiClient.get(`${endpoints.REVIEWS}${suffix}`);
     return data;
   },
 
   async getByUser(userId) {
-    return this.list(`userId=${userId}`);
+    return this.list({ userId });
   },
 
   async remove(id) {
