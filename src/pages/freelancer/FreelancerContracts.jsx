@@ -13,7 +13,7 @@ function formatMoney(value) {
   const amount = Number(value || 0);
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "THB",
     maximumFractionDigits: 0,
   }).format(Number.isFinite(amount) ? amount : 0);
 }
@@ -39,6 +39,10 @@ export default function FreelancerContracts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [completeId, setCompleteId] = useState("");
+  const [deliveryLink, setDeliveryLink] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
+  const [deliveryFile, setDeliveryFile] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [query, setQuery] = useState("");
 
@@ -90,12 +94,61 @@ export default function FreelancerContracts() {
     });
   }, [items, query, statusFilter]);
 
+  const openCompleteDialog = (id) => {
+    setCompleteId(id);
+    setDeliveryLink("");
+    setDeliveryNotes("");
+    setDeliveryFile(null);
+    setError("");
+  };
+
+  const closeCompleteDialog = () => {
+    setCompleteId("");
+    setDeliveryLink("");
+    setDeliveryNotes("");
+    setDeliveryFile(null);
+  };
+
+  const toAttachment = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () =>
+        resolve({
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          dataUrl: String(reader.result || ""),
+        });
+      reader.onerror = () => reject(new Error("Failed to read selected file"));
+      reader.readAsDataURL(file);
+    });
+
   const completeContract = async (id) => {
     setBusyId(id);
     setError("");
 
     try {
-      await contractService.complete(id);
+      const trimmedLink = deliveryLink.trim();
+      const trimmedNotes = deliveryNotes.trim();
+      let attachment = null;
+
+      if (!trimmedLink && !deliveryFile) {
+        throw new Error("Provide at least a delivery file or a delivery link.");
+      }
+
+      if (deliveryFile) {
+        if (deliveryFile.size > 2_000_000) {
+          throw new Error("File must be 2MB or smaller.");
+        }
+        attachment = await toAttachment(deliveryFile);
+      }
+
+      await contractService.complete(id, {
+        deliveryLink: trimmedLink,
+        deliveryNotes: trimmedNotes,
+        deliveryAttachment: attachment,
+      });
+      closeCompleteDialog();
       await load();
     } catch (err) {
       setError(err);
@@ -114,6 +167,64 @@ export default function FreelancerContracts() {
       </div>
 
       <ErrorBox message={error} />
+
+      {completeId && (
+        <div className="card">
+          <div className="h2">Submit Delivery and Complete Contract</div>
+          <div className="muted" style={{ marginBottom: 12 }}>
+            Attach a delivery file and/or add a delivery link. Client can view these after completion.
+          </div>
+          <div className="row">
+            <div className="grid2">
+              <div>
+                <label className="block mb-1">Delivery Link</label>
+                <input
+                  className="input"
+                  type="url"
+                  value={deliveryLink}
+                  onChange={(e) => setDeliveryLink(e.target.value)}
+                  placeholder="https://drive.google.com/... or repo/doc link"
+                />
+              </div>
+              <div>
+                <label className="block mb-1">Attach File (max 2MB)</label>
+                <input
+                  className="input"
+                  type="file"
+                  onChange={(e) => setDeliveryFile(e.target.files?.[0] || null)}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block mb-1">Delivery Notes (optional)</label>
+              <textarea
+                className="textarea"
+                value={deliveryNotes}
+                onChange={(e) => setDeliveryNotes(e.target.value)}
+                placeholder="What was delivered, setup instructions, credentials, etc."
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="btn btnOk"
+                disabled={busyId === completeId}
+                onClick={() => completeContract(completeId)}
+              >
+                {busyId === completeId ? "Submitting..." : "Complete Contract"}
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={busyId === completeId}
+                onClick={closeCompleteDialog}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
@@ -146,6 +257,7 @@ export default function FreelancerContracts() {
               <th>Status</th>
               <th>Start</th>
               <th>End</th>
+              <th>Delivery</th>
               <th style={{ width: 160 }}>Actions</th>
             </tr>
           </thead>
@@ -165,11 +277,25 @@ export default function FreelancerContracts() {
                   <td>{formatDate(contract.startDate)}</td>
                   <td>{formatDate(contract.endDate)}</td>
                   <td>
+                    {contract.delivery?.link ? (
+                      <a href={contract.delivery.link} target="_blank" rel="noreferrer">
+                        Delivery Link
+                      </a>
+                    ) : "-"}
+                    {contract.delivery?.attachment?.name ? (
+                      <div>
+                        <a href={contract.delivery.attachment.dataUrl} download={contract.delivery.attachment.name}>
+                          {contract.delivery.attachment.name}
+                        </a>
+                      </div>
+                    ) : null}
+                  </td>
+                  <td>
                     <button
                       type="button"
                       className="btn btnOk"
                       disabled={status !== "active" || busyId === id}
-                      onClick={() => completeContract(id)}
+                      onClick={() => openCompleteDialog(id)}
                     >
                       {busyId === id ? "Working..." : "Complete"}
                     </button>
@@ -180,7 +306,7 @@ export default function FreelancerContracts() {
 
             {filtered.length === 0 && (
               <tr>
-                <td colSpan="7" className="muted">
+                <td colSpan="8" className="muted">
                   No contracts found for this filter.
                 </td>
               </tr>

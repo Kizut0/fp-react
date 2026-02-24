@@ -72,7 +72,7 @@ export default function FreelancerPayments() {
     const formatMoney = (value) =>
         new Intl.NumberFormat("en-US", {
             style: "currency",
-            currency: "USD",
+            currency: "THB",
             maximumFractionDigits: 0,
         }).format(Number.isFinite(Number(value)) ? Number(value) : 0);
 

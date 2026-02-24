@@ -46,8 +46,8 @@ export const contractService = {
     return data;
   },
 
-  async complete(id) {
-    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/complete`);
+  async complete(id, payload = {}) {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/complete`, payload);
     return data;
   },
 };

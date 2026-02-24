@@ -13,7 +13,7 @@ function formatMoney(value) {
   const amount = Number(value || 0);
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "THB",
     maximumFractionDigits: 0,
   }).format(Number.isFinite(amount) ? amount : 0);
 }
@@ -237,7 +237,7 @@ export default function ClientContracts() {
             </div>
 
             <div>
-              <label className="block mb-1">Amount (USD)</label>
+              <label className="block mb-1">Amount (THB)</label>
               <input
                 className="input"
                 type="number"
@@ -289,6 +289,7 @@ export default function ClientContracts() {
               <th>Status</th>
               <th>Start</th>
               <th>End</th>
+              <th>Delivery</th>
               <th style={{ width: 280 }}>Actions</th>
             </tr>
           </thead>
@@ -307,6 +308,28 @@ export default function ClientContracts() {
                   </td>
                   <td>{formatDate(contract.startDate)}</td>
                   <td>{formatDate(contract.endDate)}</td>
+                  <td>
+                    {contract.delivery?.link ? (
+                      <div>
+                        <a href={contract.delivery.link} target="_blank" rel="noreferrer">
+                          Delivery Link
+                        </a>
+                      </div>
+                    ) : null}
+                    {contract.delivery?.attachment?.name ? (
+                      <div>
+                        <a href={contract.delivery.attachment.dataUrl} download={contract.delivery.attachment.name}>
+                          {contract.delivery.attachment.name}
+                        </a>
+                      </div>
+                    ) : null}
+                    {contract.delivery?.notes ? (
+                      <div className="muted" style={{ maxWidth: 240, whiteSpace: "pre-wrap" }}>
+                        {contract.delivery.notes}
+                      </div>
+                    ) : null}
+                    {!contract.delivery?.link && !contract.delivery?.attachment?.name && !contract.delivery?.notes ? "-" : null}
+                  </td>
                   <td>
                     <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
                       <button
@@ -343,7 +366,7 @@ export default function ClientContracts() {
 
             {filtered.length === 0 && (
               <tr>
-                <td colSpan="7" className="muted">
+                <td colSpan="8" className="muted">
                   No contracts found for the current filter.
                 </td>
               </tr>

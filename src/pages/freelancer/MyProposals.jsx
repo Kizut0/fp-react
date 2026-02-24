@@ -15,7 +15,7 @@ function formatMoney(value) {
   const amount = Number(value || 0);
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "THB",
     maximumFractionDigits: 0,
   }).format(Number.isFinite(amount) ? amount : 0);
 }
@@ -232,7 +232,7 @@ export default function MyProposals() {
             </div>
 
             <div>
-              <label className="block mb-1">Bid Price (USD)</label>
+              <label className="block mb-1">Bid Price (THB)</label>
               <input
                 className="input"
                 type="number"
