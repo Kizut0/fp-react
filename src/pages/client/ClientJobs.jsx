@@ -45,6 +45,11 @@ function normalizeEmail(value) {
   return normalizeString(value).toLowerCase();
 }
 
+function normalizeStatus(value, fallback = "open") {
+  const raw = String(value || fallback).trim().toLowerCase();
+  return raw === "closed" ? "closed" : "open";
+}
+
 function isOwnedByUser(job, owner) {
   const ownerIds = [owner.id].filter(Boolean);
   const jobOwnerIds = [job?.clientId, job?.userId, job?.ownerId, job?.createdBy]
@@ -66,6 +71,10 @@ export default function ClientJobs() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sort, setSort] = useState("newest");
+  const [query, setQuery] = useState("");
 
   const owner = useMemo(
     () => ({
@@ -76,7 +85,7 @@ export default function ClientJobs() {
   );
 
   const openCount = useMemo(
-    () => items.filter((job) => String(job.status || "open") === "open").length,
+    () => items.filter((job) => normalizeStatus(job.status) === "open").length,
     [items]
   );
 
@@ -85,11 +94,16 @@ export default function ClientJobs() {
     setError("");
 
     try {
-      const mineData = await jobService.getAll({ mine: "client", sort: "newest" });
+      const mineData = await jobService.getAll({
+        mine: "client",
+        sort,
+        status: statusFilter,
+        q: query.trim(),
+      });
       let rows = toJobsArray(mineData);
 
       if (rows.length === 0 && (owner.id || owner.email)) {
-        const broadData = await jobService.getAll({ sort: "newest" });
+        const broadData = await jobService.getAll({ sort, status: statusFilter, q: query.trim() });
         rows = toJobsArray(broadData).filter((job) => isOwnedByUser(job, owner));
       }
 
@@ -99,11 +113,47 @@ export default function ClientJobs() {
     } finally {
       setLoading(false);
     }
-  }, [owner]);
+  }, [owner, query, sort, statusFilter]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const toggleJobStatus = async (job) => {
+    const id = job._id || job.jobId;
+    if (!id) return;
+
+    const nextStatus = normalizeStatus(job.status) === "open" ? "closed" : "open";
+    setBusyId(id);
+    setError("");
+    try {
+      await jobService.update(id, { status: nextStatus });
+      await load();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const removeJob = async (job) => {
+    const id = job._id || job.jobId;
+    if (!id) return;
+
+    const confirmed = window.confirm(`Delete job "${job.title}"?`);
+    if (!confirmed) return;
+
+    setBusyId(id);
+    setError("");
+    try {
+      await jobService.delete(id);
+      await load();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusyId("");
+    }
+  };
 
   if (loading) return <Loading />;
 
@@ -117,14 +167,36 @@ export default function ClientJobs() {
       <ErrorBox message={error} />
 
       <div className="card">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap" }}>
           <div>
             <div className="h2">Job Posts</div>
             <div className="muted">Total: {items.length} • Open: {openCount}</div>
           </div>
-          <Link to="/client/jobs/new" className="btn btnOk">
-            + Create Job
-          </Link>
+
+          <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+            <input
+              className="input"
+              placeholder="Search title, description, skills..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ minWidth: 250 }}
+            />
+            <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">All status</option>
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+            </select>
+            <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="budgetHigh">Budget: High to Low</option>
+              <option value="budgetLow">Budget: Low to High</option>
+              <option value="mostProposals">Most Proposals</option>
+            </select>
+            <Link to="/client/jobs/new" className="btn btnOk">
+              + Create Job
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -163,6 +235,22 @@ export default function ClientJobs() {
                       <Link to={`/client/jobs/${job._id || job.jobId}/edit`} className="btn">
                         Edit
                       </Link>
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={busyId === (job._id || job.jobId)}
+                        onClick={() => toggleJobStatus(job)}
+                      >
+                        {normalizeStatus(job.status) === "open" ? "Close" : "Reopen"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btnDanger"
+                        disabled={busyId === (job._id || job.jobId)}
+                        onClick={() => removeJob(job)}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>

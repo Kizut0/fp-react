@@ -69,6 +69,8 @@ export default function ClientPayments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [query, setQuery] = useState("");
   const [form, setForm] = useState(DEFAULT_FORM);
 
   const load = async () => {
@@ -117,6 +119,29 @@ export default function ClientPayments() {
     });
     return out;
   }, [payments]);
+
+  const filteredPayments = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    return payments.filter((payment) => {
+      const status = getPaymentStatus(payment);
+      if (statusFilter !== "all" && status !== statusFilter) return false;
+
+      if (!q) return true;
+      const linkedContract = contractById.get(normalizeId(payment?.contractId)) || null;
+      const fields = [
+        payment.contractId,
+        linkedContract?.jobTitle,
+        payment.freelancerId,
+        payment.freelancerName,
+        payment.note,
+      ]
+        .map((v) => String(v || "").toLowerCase())
+        .join(" ");
+
+      return fields.includes(q);
+    });
+  }, [contractById, payments, query, statusFilter]);
 
   const selectedContract = useMemo(
     () => contractById.get(normalizeId(form.contractId)) || null,
@@ -285,8 +310,25 @@ export default function ClientPayments() {
       </div>
 
       <div className="card">
-        <div className="muted" style={{ marginBottom: 8 }}>
-          Total: {payments.length} • Paid: {stats.paid} • Pending: {stats.pending} • Failed: {stats.failed}
+        <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+          <div className="muted">
+            Total: {payments.length} • Paid: {stats.paid} • Pending: {stats.pending} • Failed: {stats.failed}
+          </div>
+          <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+            <input
+              className="input"
+              placeholder="Search payments..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ minWidth: 220 }}
+            />
+            <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">All status</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
         </div>
 
         <table className="table">
@@ -301,7 +343,7 @@ export default function ClientPayments() {
             </tr>
           </thead>
           <tbody>
-            {payments.map((payment, idx) => {
+            {filteredPayments.map((payment, idx) => {
               const id = normalizeId(payment?._id || payment?.paymentId) || `${normalizeId(payment?.contractId)}-${idx}`;
               const linkedContract = contractById.get(normalizeId(payment?.contractId)) || null;
               const status = getPaymentStatus(payment);
@@ -322,10 +364,10 @@ export default function ClientPayments() {
               );
             })}
 
-            {payments.length === 0 && (
+            {filteredPayments.length === 0 && (
               <tr>
                 <td colSpan="6" className="muted">
-                  No payments yet.
+                  No payments match the current filter.
                 </td>
               </tr>
             )}

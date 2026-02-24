@@ -48,6 +48,8 @@ export default function ClientContracts() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
   const [creating, setCreating] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [query, setQuery] = useState("");
   const [form, setForm] = useState(DEFAULT_CREATE);
 
   const load = async () => {
@@ -76,6 +78,29 @@ export default function ClientContracts() {
     }
     return out;
   }, [items]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    return items.filter((item) => {
+      const status = normalizeStatus(item.status);
+      if (statusFilter !== "all" && status !== statusFilter) return false;
+
+      if (!q) return true;
+
+      const fields = [
+        item.jobTitle,
+        item.jobId,
+        item.freelancerId,
+        item.freelancerName,
+        item.clientId,
+      ]
+        .map((v) => String(v || "").toLowerCase())
+        .join(" ");
+
+      return fields.includes(q);
+    });
+  }, [items, query, statusFilter]);
 
   const updateForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -234,8 +259,25 @@ export default function ClientContracts() {
       </div>
 
       <div className="card">
-        <div className="muted" style={{ marginBottom: 8 }}>
-          Total: {items.length} • Active: {stats.active} • Completed: {stats.completed} • Cancelled: {stats.cancelled}
+        <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+          <div className="muted">
+            Total: {items.length} • Active: {stats.active} • Completed: {stats.completed} • Cancelled: {stats.cancelled}
+          </div>
+          <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+            <input
+              className="input"
+              placeholder="Search contracts..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ minWidth: 220 }}
+            />
+            <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">All status</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
         </div>
 
         <table className="table">
@@ -251,7 +293,7 @@ export default function ClientContracts() {
             </tr>
           </thead>
           <tbody>
-            {items.map((contract) => {
+            {filtered.map((contract) => {
               const id = contract._id || contract.contractId;
               const status = normalizeStatus(contract.status);
 
@@ -299,10 +341,10 @@ export default function ClientContracts() {
               );
             })}
 
-            {items.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
                 <td colSpan="7" className="muted">
-                  No contracts yet.
+                  No contracts found for the current filter.
                 </td>
               </tr>
             )}

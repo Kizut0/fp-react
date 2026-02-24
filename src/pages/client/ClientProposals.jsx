@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { contractService } from "../../services/contractService";
 import ErrorBox from "../../components/ErrorBox";
 import Loading from "../../components/Loading";
 import { proposalService } from "../../services/proposalService";
@@ -41,6 +42,8 @@ export default function ClientProposals() {
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [busyId, setBusyId] = useState("");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("newest");
 
   const load = async () => {
     setLoading(true);
@@ -61,9 +64,35 @@ export default function ClientProposals() {
   }, []);
 
   const filtered = useMemo(() => {
-    if (statusFilter === "all") return items;
-    return items.filter((item) => normalizeStatus(item.status) === statusFilter);
-  }, [items, statusFilter]);
+    const q = query.trim().toLowerCase();
+
+    let rows = items.filter((item) => {
+      if (statusFilter !== "all" && normalizeStatus(item.status) !== statusFilter) return false;
+
+      if (!q) return true;
+
+      const fields = [
+        item.jobTitle,
+        item.jobId,
+        item.freelancerName,
+        item.freelancerId,
+        item.message,
+      ]
+        .map((v) => String(v || "").toLowerCase())
+        .join(" ");
+
+      return fields.includes(q);
+    });
+
+    rows = rows.slice().sort((a, b) => {
+      if (sort === "oldest") return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      if (sort === "bidHigh") return Number(b.price || 0) - Number(a.price || 0);
+      if (sort === "bidLow") return Number(a.price || 0) - Number(b.price || 0);
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
+    return rows;
+  }, [items, query, sort, statusFilter]);
 
   const counts = useMemo(() => {
     const initial = { submitted: 0, accepted: 0, rejected: 0, withdrawn: 0 };
@@ -100,6 +129,19 @@ export default function ClientProposals() {
     }
   };
 
+  const createContract = async (proposalId) => {
+    setBusyId(proposalId);
+    setError("");
+    try {
+      await contractService.create({ proposalId });
+      await load();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusyId("");
+    }
+  };
+
   if (loading) return <Loading />;
 
   return (
@@ -118,6 +160,13 @@ export default function ClientProposals() {
           </div>
 
           <div className="flex items-center gap-3" style={{ flexWrap: "wrap" }}>
+            <input
+              className="input"
+              placeholder="Search proposals..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ minWidth: 220 }}
+            />
             <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="all">All statuses</option>
               <option value="submitted">Submitted</option>
@@ -125,9 +174,18 @@ export default function ClientProposals() {
               <option value="rejected">Rejected</option>
               <option value="withdrawn">Withdrawn</option>
             </select>
+            <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="bidHigh">Bid: High to Low</option>
+              <option value="bidLow">Bid: Low to High</option>
+            </select>
 
             <Link to="/client/jobs" className="btn">
               Go to My Jobs
+            </Link>
+            <Link to="/client/contracts" className="btn">
+              Open Contracts
             </Link>
           </div>
         </div>
@@ -187,6 +245,14 @@ export default function ClientProposals() {
                         onClick={() => handleReject(id)}
                       >
                         Reject
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={status !== "accepted" || busyId === id}
+                        onClick={() => createContract(id)}
+                      >
+                        Create Contract
                       </button>
                     </div>
                   </td>
