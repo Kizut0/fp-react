@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import ErrorBox from "../../components/ErrorBox";
 import Loading from "../../components/Loading";
 import { contractService } from "../../services/contractService";
@@ -64,6 +64,7 @@ const DEFAULT_FORM = {
 };
 
 export default function ClientPayments() {
+  const location = useLocation();
   const [contracts, setContracts] = useState([]);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -165,6 +166,17 @@ export default function ClientPayments() {
           : "",
     }));
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const requestedContractId = normalizeId(params.get("contractId"));
+    if (!requestedContractId) return;
+
+    const contract = contractById.get(requestedContractId);
+    if (!contract) return;
+
+    onContractChange(requestedContractId);
+  }, [contractById, location.search]);
 
   const createPayment = async (e) => {
     e.preventDefault();

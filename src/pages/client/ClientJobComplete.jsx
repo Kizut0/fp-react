@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ErrorBox from "../../components/ErrorBox";
 import Loading from "../../components/Loading";
 import { contractService } from "../../services/contractService";
@@ -21,6 +22,7 @@ function requestStatus(item) {
 }
 
 export default function ClientJobComplete() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -55,6 +57,8 @@ export default function ClientJobComplete() {
       const feedback = action === "reject" ? window.prompt("Rejection feedback (optional):", "") || "" : "";
       if (action === "accept") {
         await contractService.acceptCompletion(id, feedback);
+        navigate(`/client/payments?contractId=${encodeURIComponent(String(id || ""))}`);
+        return;
       } else {
         await contractService.rejectCompletion(id, feedback);
       }
