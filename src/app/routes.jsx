@@ -1,4 +1,5 @@
 import React from "react";
+import { Navigate } from "react-router-dom";
 import AppShell from "../components/AppShell";
 import ProtectedRoute from "../components/ProtectedRoute";
 import RoleGate from "../components/RoleGate";
@@ -41,7 +42,8 @@ export const routes = [
     {
         element: <AppShell />,
         children: [
-            { path: "/", element: <Home /> },
+            { path: "/", element: <Navigate to="/login" replace /> },
+            { path: "/home", element: <Home /> },
             { path: "/jobs", element: <JobListPublic /> },
             { path: "/jobs/:jobId", element: <JobDetailPublic /> },
             { path: "/freelancers/:freelancerId", element: <FreelancerProfilePublic /> },

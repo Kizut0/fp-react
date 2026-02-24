@@ -3,6 +3,25 @@ import Loading from "../../components/Loading";
 import ErrorBox from "../../components/ErrorBox";
 import { paymentService } from "../../services/paymentService";
 
+function normalizeStatus(value, fallback = "unknown") {
+    const raw = String(value || fallback).trim().toLowerCase();
+    return raw || fallback;
+}
+
+function formatDateTime(value) {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    }).format(date);
+}
+
 export default function FreelancerPayments() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -34,15 +53,15 @@ export default function FreelancerPayments() {
             <ErrorBox error={err} />
             <div className="card">
                 <table className="table">
-                    <thead><tr><th>Contract</th><th>Amount</th><th>Status</th><th>Method</th><th>Date</th></tr></thead>
+                    <thead><tr><th>Contract</th><th>Amount</th><th>Status</th><th>Note</th><th>Date</th></tr></thead>
                     <tbody>
                         {items.map((p) => (
                             <tr key={p._id || p.paymentId}>
                                 <td>{p.contractId}</td>
                                 <td>{p.amount}</td>
-                                <td><span className="badge">{p.paymentStatus}</span></td>
-                                <td>{p.paymentMethod}</td>
-                                <td className="muted">{p.paymentDate ? new Date(p.paymentDate).toLocaleString() : "-"}</td>
+                                <td><span className="badge">{normalizeStatus(p.status || p.paymentStatus)}</span></td>
+                                <td style={{ whiteSpace: "pre-wrap" }}>{p.note || p.paymentMethod || "-"}</td>
+                                <td className="muted">{formatDateTime(p.createdAt || p.paymentDate || p.updatedAt)}</td>
                             </tr>
                         ))}
                         {items.length === 0 && <tr><td colSpan="5" className="muted">No payments.</td></tr>}

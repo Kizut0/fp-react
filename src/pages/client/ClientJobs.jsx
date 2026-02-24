@@ -1,103 +1,176 @@
-import React, { useEffect, useState } from "react";
-
-import { Link, useNavigate } from "react-router-dom";
-
-import Loading from "../../components/Loading";
-
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import ErrorBox from "../../components/ErrorBox";
-
-import ConfirmButton from "../../components/ConfirmButton";
-
+import Loading from "../../components/Loading";
+import { useAuth } from "../../contexts/AuthContext";
 import { jobService } from "../../services/jobService";
 
-export default function ClientJobs() {
+function toJobsArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
 
-  const nav = useNavigate();
+function formatMoney(value) {
+  const amount = Number(value || 0);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(amount) ? amount : 0);
+}
+
+function extractJobDate(job) {
+  return job?.createdAt || job?.postedAt || job?.postedDate || job?.date || null;
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function normalizeString(value) {
+  return String(value || "").trim();
+}
+
+function normalizeEmail(value) {
+  return normalizeString(value).toLowerCase();
+}
+
+function isOwnedByUser(job, owner) {
+  const ownerIds = [owner.id].filter(Boolean);
+  const jobOwnerIds = [job?.clientId, job?.userId, job?.ownerId, job?.createdBy]
+    .map(normalizeString)
+    .filter(Boolean);
+
+  if (jobOwnerIds.some((id) => ownerIds.includes(id))) return true;
+
+  const ownerEmail = owner.email;
+  if (!ownerEmail) return false;
+
+  const jobEmails = [job?.clientEmail, job?.email].map(normalizeEmail).filter(Boolean);
+  return jobEmails.includes(ownerEmail);
+}
+
+export default function ClientJobs() {
+  const { user } = useAuth();
 
   const [items, setItems] = useState([]);
-
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [err, setErr] = useState(null);
+  const owner = useMemo(
+    () => ({
+      id: normalizeString(user?.id || user?._id || user?.userId || user?.sub),
+      email: normalizeEmail(user?.email),
+    }),
+    [user]
+  );
 
-  const load = async () => {
+  const openCount = useMemo(
+    () => items.filter((job) => String(job.status || "open") === "open").length,
+    [items]
+  );
 
-    setLoading(true); setErr(null);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
 
     try {
+      const mineData = await jobService.getAll({ mine: "client", sort: "newest" });
+      let rows = toJobsArray(mineData);
 
-      const data = await jobService.list("mine=1");
+      if (rows.length === 0 && (owner.id || owner.email)) {
+        const broadData = await jobService.getAll({ sort: "newest" });
+        rows = toJobsArray(broadData).filter((job) => isOwnedByUser(job, owner));
+      }
 
-      setItems(data?.items || data || []);
-
+      setItems(rows);
     } catch (e) {
-
-      setErr(e);
-
+      setError(e?.response?.data?.message || e?.message || "Failed to load jobs");
     } finally {
-
       setLoading(false);
-
     }
+  }, [owner]);
 
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const remove = async (id) => {
-
-    await jobService.remove(id);
-
-    await load();
-
-  };
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (loading) return <Loading />;
 
   return (
     <div className="row">
-      <div className="card" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-        <div>
-          <div className="h1">My Jobs</div>
-          <div className="muted">Create and manage your job posts.</div>
-        </div>
-        <button className="btn" onClick={() => nav("/client/jobs/new")}>+ New Job</button>
+      <div className="card">
+        <div className="h1">My Jobs</div>
+        <div className="muted">Create and manage your project postings with realistic requirements.</div>
       </div>
 
-      <ErrorBox error={err} />
+      <ErrorBox message={error} />
 
       <div className="card">
-        <table className="table">
-          <thead>
-            <tr><th>Title</th><th>Budget</th><th>Status</th><th style={{ width: 260 }}>Actions</th></tr>
-          </thead>
-          <tbody>
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="h2">Job Posts</div>
+            <div className="muted">Total: {items.length} • Open: {openCount}</div>
+          </div>
+          <Link to="/client/jobs/new" className="btn btnOk">
+            + Create Job
+          </Link>
+        </div>
+      </div>
 
-            {items.map((j) => {
-
-              const id = j._id || j.jobId;
-
-              return (
-                <tr key={id}>
-                  <td><Link to={`/client/jobs/${id}`} style={{ textDecoration: "underline" }}>{j.title}</Link></td>
-                  <td>{j.budget}</td>
-                  <td><span className="badge">{j.status || "open"}</span></td>
-                  <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button className="btn btnGhost" onClick={() => nav(`/client/jobs/${id}/edit`)}>Edit</button>
-                    <ConfirmButton onConfirm={() => remove(id)} confirmText="Delete this job?">Delete</ConfirmButton>
+      <div className="card">
+        {items.length === 0 ? (
+          <p className="muted">No jobs yet. Click "Create Job" to post your first project.</p>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Budget</th>
+                <th>Posted</th>
+                <th>Proposals</th>
+                <th>Status</th>
+                <th style={{ width: 220 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((job) => (
+                <tr key={job._id || job.jobId}>
+                  <td>{job.title}</td>
+                  <td>{job.category || "General"}</td>
+                  <td>{formatMoney(job.budget)}</td>
+                  <td>{formatDate(extractJobDate(job))}</td>
+                  <td>{Number(job.proposalsCount || 0)}</td>
+                  <td>
+                    <span className="badge">{job.status || "open"}</span>
+                  </td>
+                  <td>
+                    <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+                      <Link to={`/client/jobs/${job._id || job.jobId}`} className="btn">
+                        View
+                      </Link>
+                      <Link to={`/client/jobs/${job._id || job.jobId}/edit`} className="btn">
+                        Edit
+                      </Link>
+                    </div>
                   </td>
                 </tr>
-
-              );
-
-            })}
-
-            {items.length === 0 && <tr><td colSpan="4" className="muted">No jobs yet.</td></tr>}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
-
   );
-
 }

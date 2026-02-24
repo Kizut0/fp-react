@@ -1,69 +1,177 @@
-import React, { useEffect, useState } from "react";
-
-import { useLocation, useNavigate } from "react-router-dom";
-
-import Loading from "../../components/Loading";
-
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import ErrorBox from "../../components/ErrorBox";
-
+import Loading from "../../components/Loading";
 import { contractService } from "../../services/contractService";
+import { paymentService } from "../../services/paymentService";
 
-export default function ClientContracts() {
+function toArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
 
-  const loc = useLocation();
+function normalizeId(value) {
+  return String(value || "").trim();
+}
 
-  const nav = useNavigate();
+function normalizeStatus(value, fallback = "unknown") {
+  const raw = String(value || fallback).trim().toLowerCase();
+  return raw || fallback;
+}
 
-  const highlight = loc.state?.highlight;
+function formatMoney(value) {
+  const amount = Number(value || 0);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(amount) ? amount : 0);
+}
 
-  const [items, setItems] = useState([]);
+function formatDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
 
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function getContractKey(contract) {
+  return normalizeId(contract?._id || contract?.contractId);
+}
+
+function getPaymentStatus(payment) {
+  return normalizeStatus(payment?.status || payment?.paymentStatus, "unknown");
+}
+
+function getPaymentDate(payment) {
+  return payment?.createdAt || payment?.paymentDate || payment?.updatedAt || null;
+}
+
+const DEFAULT_FORM = {
+  contractId: "",
+  freelancerId: "",
+  amount: "",
+  status: "paid",
+  note: "",
+};
+
+export default function ClientPayments() {
+  const [contracts, setContracts] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const [err, setErr] = useState(null);
-
-  const [busyId, setBusyId] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState(DEFAULT_FORM);
 
   const load = async () => {
-
-    setLoading(true); setErr(null);
+    setLoading(true);
+    setError("");
 
     try {
+      const [contractData, paymentData] = await Promise.all([
+        contractService.list({ mine: "client" }),
+        paymentService.list(),
+      ]);
 
-      const data = await contractService.list("mine=client");
-
-      setItems(data?.items || data || []);
-
-    } catch (e) {
-
-      setErr(e);
-
+      setContracts(toArray(contractData));
+      setPayments(toArray(paymentData));
+    } catch (err) {
+      setError(err);
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
-  const setStatus = async (id, status) => {
+  const contractById = useMemo(() => {
+    const out = new Map();
+    contracts.forEach((contract) => {
+      const id = getContractKey(contract);
+      if (id) out.set(id, contract);
+      if (normalizeId(contract?.contractId)) out.set(normalizeId(contract.contractId), contract);
+    });
+    return out;
+  }, [contracts]);
 
-    setBusyId(id);
+  const activeContracts = useMemo(
+    () => contracts.filter((contract) => normalizeStatus(contract?.status, "active") !== "cancelled"),
+    [contracts]
+  );
+
+  const stats = useMemo(() => {
+    const out = { paid: 0, pending: 0, failed: 0 };
+    payments.forEach((payment) => {
+      const status = getPaymentStatus(payment);
+      if (out[status] !== undefined) out[status] += 1;
+    });
+    return out;
+  }, [payments]);
+
+  const selectedContract = useMemo(
+    () => contractById.get(normalizeId(form.contractId)) || null,
+    [contractById, form.contractId]
+  );
+
+  const updateForm = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const onContractChange = (value) => {
+    const contract = contractById.get(normalizeId(value));
+
+    setForm((prev) => ({
+      ...prev,
+      contractId: value,
+      freelancerId: contract?.freelancerId ? String(contract.freelancerId) : "",
+      amount:
+        contract && Number.isFinite(Number(contract.amount))
+          ? String(contract.amount)
+          : "",
+    }));
+  };
+
+  const createPayment = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
 
     try {
+      const contractId = normalizeId(form.contractId);
+      const freelancerId = normalizeId(form.freelancerId);
+      const amount = Number(form.amount);
+      const status = normalizeStatus(form.status, "paid");
+      const note = String(form.note || "").trim();
 
-      await contractService.updateStatus(id, status);
+      if (!contractId) throw new Error("Contract is required.");
+      if (!freelancerId) throw new Error("Freelancer ID is required.");
+      if (!Number.isFinite(amount) || amount <= 0) throw new Error("Amount must be greater than 0.");
 
+      await paymentService.create({
+        contractId,
+        freelancerId,
+        amount,
+        status,
+        note,
+      });
+
+      setForm((prev) => ({ ...DEFAULT_FORM, status: prev.status }));
       await load();
-
+    } catch (err) {
+      setError(err);
     } finally {
-
-      setBusyId("");
-
+      setSubmitting(false);
     }
-
   };
 
   if (loading) return <Loading />;
@@ -71,54 +179,159 @@ export default function ClientContracts() {
   return (
     <div className="row">
       <div className="card">
-        <div className="h1">Contracts</div>
-        <div className="muted">Track active and completed work.</div>
+        <div className="h1">Client Payments</div>
+        <div className="muted">Record payments for active contracts and track status over time.</div>
       </div>
-      <ErrorBox error={err} />
+
+      <ErrorBox message={error} />
+
       <div className="card">
+        <div className="h2">Create Payment</div>
+        <div className="muted" style={{ marginBottom: 12 }}>
+          Select a contract to auto-fill freelancer and amount.
+        </div>
+
+        <form className="row" onSubmit={createPayment}>
+          <div className="grid2">
+            <div>
+              <label className="block mb-1">Contract</label>
+              <select
+                className="input"
+                value={form.contractId}
+                onChange={(e) => onContractChange(e.target.value)}
+                required
+              >
+                <option value="">Select contract</option>
+                {activeContracts.map((contract) => {
+                  const id = getContractKey(contract);
+                  if (!id) return null;
+
+                  return (
+                    <option key={id} value={id}>
+                      {(contract.jobTitle || contract.jobId || "Untitled Project")} • {formatMoney(contract.amount)}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div>
+              <label className="block mb-1">Freelancer ID</label>
+              <input
+                className="input"
+                value={form.freelancerId}
+                onChange={(e) => updateForm("freelancerId", e.target.value)}
+                placeholder="Freelancer user id"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1">Amount (USD)</label>
+              <input
+                className="input"
+                type="number"
+                min="1"
+                value={form.amount}
+                onChange={(e) => updateForm("amount", e.target.value)}
+                placeholder="Payment amount"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1">Status</label>
+              <select
+                className="input"
+                value={form.status}
+                onChange={(e) => updateForm("status", e.target.value)}
+              >
+                <option value="paid">Paid</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block mb-1">Note</label>
+            <textarea
+              className="textarea"
+              value={form.note}
+              onChange={(e) => updateForm("note", e.target.value)}
+              placeholder="Optional context such as invoice reference"
+            />
+          </div>
+
+          <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+            <button type="submit" className="btn btnOk" disabled={submitting}>
+              {submitting ? "Saving..." : "Create Payment"}
+            </button>
+            <Link to="/client/contracts" className="btn">
+              Open Contracts
+            </Link>
+            <Link to="/client/reviews" className="btn">
+              Leave Reviews
+            </Link>
+          </div>
+        </form>
+
+        {selectedContract && (
+          <div className="muted" style={{ marginTop: 8 }}>
+            Selected: {selectedContract.jobTitle || selectedContract.jobId || "Untitled Project"} •
+            Freelancer {selectedContract.freelancerName || selectedContract.freelancerId || "-"}
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <div className="muted" style={{ marginBottom: 8 }}>
+          Total: {payments.length} • Paid: {stats.paid} • Pending: {stats.pending} • Failed: {stats.failed}
+        </div>
+
         <table className="table">
           <thead>
-            <tr><th>Job</th><th>Freelancer</th><th>Status</th><th>Dates</th><th style={{ width: 300 }}>Actions</th></tr>
+            <tr>
+              <th>Contract</th>
+              <th>Freelancer</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Note</th>
+              <th>Date</th>
+            </tr>
           </thead>
           <tbody>
-
-            {items.map((c) => {
-
-              const id = c._id || c.contractId;
+            {payments.map((payment, idx) => {
+              const id = normalizeId(payment?._id || payment?.paymentId) || `${normalizeId(payment?.contractId)}-${idx}`;
+              const linkedContract = contractById.get(normalizeId(payment?.contractId)) || null;
+              const status = getPaymentStatus(payment);
 
               return (
-                <tr key={id} style={highlight === id ? { outline: "2px solid #3b65b3" } : undefined}>
-                  <td>{c.jobTitle || c.jobId}</td>
-                  <td>{c.freelancerName || c.freelancerId}</td>
-                  <td><span className="badge">{c.status}</span></td>
-                  <td className="muted">
-
-                    {c.startDate ? new Date(c.startDate).toLocaleDateString() : "-"} → {c.endDate ? new Date(c.endDate).toLocaleDateString() : "-"}
+                <tr key={id}>
+                  <td>{linkedContract?.jobTitle || payment.contractId || "-"}</td>
+                  <td>{payment.freelancerName || payment.freelancerId || linkedContract?.freelancerId || "-"}</td>
+                  <td>{formatMoney(payment.amount)}</td>
+                  <td>
+                    <span className="badge">{status}</span>
                   </td>
-                  <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button className="btn btnOk" disabled={busyId === id} onClick={() => setStatus(id, "completed")}>Mark Completed</button>
-                    <button className="btn btnDanger" disabled={busyId === id} onClick={() => setStatus(id, "cancelled")}>Cancel</button>
-                    <button className="btn btnGhost" onClick={() => nav("/client/payments", { state: { contractId: id } })}>
-
-                      Add Payment
-                    </button>
-                    <button className="btn btnGhost" onClick={() => nav("/client/reviews", { state: { contractId: id } })}>
-
-                      Add Review
-                    </button>
+                  <td style={{ maxWidth: 320, whiteSpace: "pre-wrap" }}>
+                    {payment.note || payment.paymentMethod || "-"}
                   </td>
+                  <td className="muted">{formatDateTime(getPaymentDate(payment))}</td>
                 </tr>
-
               );
-
             })}
 
-            {items.length === 0 && <tr><td colSpan="5" className="muted">No contracts.</td></tr>}
+            {payments.length === 0 && (
+              <tr>
+                <td colSpan="6" className="muted">
+                  No payments yet.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
     </div>
-
   );
-
 }

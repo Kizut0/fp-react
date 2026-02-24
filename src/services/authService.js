@@ -8,6 +8,7 @@ export const authService = {
       credentials
     );
 
+    localStorage.setItem("fl_token", data.token);
     localStorage.setItem("token", data.token);
     return data;
   },
@@ -27,7 +28,13 @@ export const authService = {
     return data;
   },
 
+  async me() {
+    return this.getCurrentUser();
+  },
+
   logout() {
+    localStorage.removeItem("fl_token");
+    localStorage.removeItem("fl_user");
     localStorage.removeItem("token");
   },
 };
