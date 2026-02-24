@@ -13,21 +13,34 @@ export default function Login() {
  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
- 
+  const [fieldErrors, setFieldErrors] = useState({
+    email: "",
+    password: "",
+  });
+  const warningMessage = error || fieldErrors.email || fieldErrors.password;
+
   const handleChange = (e) => {
+    const { name, value } = e.target;
+
     setForm({
       ...form,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+
+    setFieldErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
   };
- 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
- 
+
     try {
       setLoading(true);
       setError("");
- 
+      setFieldErrors({ email: "", password: "" });
+
       const data = await login(form);
       const role = String(data?.user?.role || "").toLowerCase();
       if (role === "admin") navigate("/admin/dashboard");
@@ -35,8 +48,18 @@ export default function Login() {
       else navigate("/freelancer/dashboard");
     } catch (err) {
       const apiMessage = err.response?.data?.message;
-      const apiError = err.response?.data?.error;
-      setError([apiMessage, apiError, err.message, "Login failed"].filter(Boolean).join(": "));
+      const apiField = String(err.response?.data?.field || "").trim();
+      const fallback = apiMessage || err.message || "Login failed";
+
+      if (apiField === "email") {
+        setFieldErrors((prev) => ({ ...prev, email: fallback }));
+      } else if (apiField === "password") {
+        setFieldErrors((prev) => ({ ...prev, password: fallback }));
+      } else if (apiField === "email_password") {
+        setFieldErrors({ email: "Email is required", password: "Password is required" });
+      } else {
+        setError(fallback);
+      }
     } finally {
       setLoading(false);
     }
@@ -49,9 +72,10 @@ export default function Login() {
           Login
         </h1>
  
-        {error && (
-          <div className="bg-red-100 text-red-600 p-3 rounded mb-4">
-            {error}
+        {warningMessage && (
+          <div className="bg-red-100 text-red-700 p-3 rounded mb-4 flex items-center gap-2">
+            <span aria-hidden="true">⚠</span>
+            <span>{warningMessage}</span>
           </div>
         )}
  
@@ -64,10 +88,13 @@ export default function Login() {
               required
               value={form.email}
               onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
+              className={`w-full border px-3 py-2 rounded ${fieldErrors.email ? "border-red-500" : ""}`}
             />
+            {fieldErrors.email && (
+              <p className="text-red-600 text-sm mt-1">⚠ {fieldErrors.email}</p>
+            )}
           </div>
- 
+
           <div className="mb-6">
             <label className="block mb-1">Password</label>
             <input
@@ -76,8 +103,11 @@ export default function Login() {
               required
               value={form.password}
               onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
+              className={`w-full border px-3 py-2 rounded ${fieldErrors.password ? "border-red-500" : ""}`}
             />
+            {fieldErrors.password && (
+              <p className="text-red-600 text-sm mt-1">⚠ {fieldErrors.password}</p>
+            )}
           </div>
  
           <button

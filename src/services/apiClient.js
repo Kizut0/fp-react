@@ -21,7 +21,15 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const requestUrl = String(error.config?.url || "");
+    const isLoginOrRegisterRequest =
+      requestUrl.includes("/auth/login") || requestUrl.includes("/auth/register");
+    const hasToken = Boolean(
+      localStorage.getItem("fl_token") || localStorage.getItem("token")
+    );
+
+    if (status === 401 && hasToken && !isLoginOrRegisterRequest) {
       localStorage.removeItem("fl_token");
       localStorage.removeItem("fl_user");
       localStorage.removeItem("token");
