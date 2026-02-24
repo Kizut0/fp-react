@@ -50,4 +50,28 @@ export const contractService = {
     const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/complete`, payload);
     return data;
   },
+
+  async submitCompletion(id, payload) {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/completion`, {
+      action: "submit",
+      ...payload,
+    });
+    return data;
+  },
+
+  async acceptCompletion(id, feedback = "") {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/completion`, {
+      action: "accept",
+      feedback,
+    });
+    return data;
+  },
+
+  async rejectCompletion(id, feedback = "") {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/completion`, {
+      action: "reject",
+      feedback,
+    });
+    return data;
+  },
 };
