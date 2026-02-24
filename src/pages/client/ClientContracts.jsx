@@ -158,22 +158,6 @@ export default function ClientContracts() {
     }
   };
 
-  const deleteContract = async (id) => {
-    const confirmed = window.confirm("Delete this contract permanently?");
-    if (!confirmed) return;
-
-    setBusyId(id);
-    setError("");
-    try {
-      await contractService.remove(id);
-      await load();
-    } catch (err) {
-      setError(err);
-    } finally {
-      setBusyId("");
-    }
-  };
-
   if (loading) return <Loading />;
 
   return (
@@ -290,7 +274,7 @@ export default function ClientContracts() {
               <th>Start</th>
               <th>End</th>
               <th>Delivery</th>
-              <th style={{ width: 280 }}>Actions</th>
+              <th style={{ width: 220 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -348,15 +332,6 @@ export default function ClientContracts() {
                         onClick={() => cancelContract(id)}
                       >
                         Cancel
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn btnDanger"
-                        disabled={busyId === id}
-                        onClick={() => deleteContract(id)}
-                      >
-                        Delete
                       </button>
                     </div>
                   </td>
