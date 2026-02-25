@@ -20,6 +20,15 @@ function formatMoney(value) {
   }).format(Number.isFinite(amount) ? amount : 0);
 }
 
+function renderBudget(job) {
+  const remaining = Number(job?.budget || 0);
+  const original = Number(job?.budgetOriginal || remaining);
+  const hasReduction = Number.isFinite(original) && Number.isFinite(remaining) && original > remaining;
+
+  if (!hasReduction) return formatMoney(remaining);
+  return `${formatMoney(remaining)} / ${formatMoney(original)}`;
+}
+
 function extractJobDate(job) {
   return job?.createdAt || job?.postedAt || job?.postedDate || job?.date || null;
 }
@@ -221,7 +230,7 @@ export default function ClientJobs() {
                 <tr key={job._id || job.jobId}>
                   <td>{job.title}</td>
                   <td>{job.category || "General"}</td>
-                  <td>{formatMoney(job.budget)}</td>
+                  <td>{renderBudget(job)}</td>
                   <td>{formatDate(extractJobDate(job))}</td>
                   <td>{Number(job.proposalsCount || 0)}</td>
                   <td>
