@@ -185,6 +185,45 @@ select {
   gap: 10px;
 }
 
+.statCard {
+  min-height: 120px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.statCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statCardLabel {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.statCardValue {
+  margin: 0;
+  font-size: 2.2rem;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #111827;
+}
+
+.statCardTrend {
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+}
+
+.statCardIcon {
+  font-size: 1.75rem;
+  color: #9ca3af;
+}
+
 .centeredActions {
   justify-content: center;
   margin-top: 12px;

@@ -36,6 +36,14 @@ function normalizeStatus(value) {
   return String(value || "submitted").toLowerCase();
 }
 
+function toErrorMessage(err) {
+  const message = String(err?.response?.data?.message || err?.message || "Failed to submit proposal").trim();
+  if (message.toLowerCase().includes("only freelancers can submit proposals")) {
+    return "Your session role is out of sync. Please logout and login again as Freelancer, then submit again.";
+  }
+  return message;
+}
+
 export default function MyProposals() {
   const location = useLocation();
   const prefillJob = location.state?.createForJob;
@@ -113,7 +121,7 @@ export default function MyProposals() {
       setForm((prev) => ({ ...prev, price: "", message: "" }));
       await load();
     } catch (err) {
-      setError(err);
+      setError(toErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -148,7 +156,7 @@ export default function MyProposals() {
       if (editingId === proposalId) cancelEdit();
       await load();
     } catch (err) {
-      setError(err);
+      setError(toErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -219,7 +227,10 @@ export default function MyProposals() {
               <select
                 className="input"
                 value={form.jobId}
-                onChange={(e) => setForm((prev) => ({ ...prev, jobId: e.target.value }))}
+                onChange={(e) => {
+                  setError("");
+                  setForm((prev) => ({ ...prev, jobId: e.target.value }));
+                }}
                 disabled={Boolean(editingId)}
               >
                 <option value="">Select an open job</option>
@@ -238,7 +249,10 @@ export default function MyProposals() {
                 type="number"
                 min="1"
                 value={form.price}
-                onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
+                onChange={(e) => {
+                  setError("");
+                  setForm((prev) => ({ ...prev, price: e.target.value }));
+                }}
                 placeholder="1200"
               />
             </div>
@@ -249,7 +263,10 @@ export default function MyProposals() {
             <textarea
               className="textarea"
               value={form.message}
-              onChange={(e) => setForm((prev) => ({ ...prev, message: e.target.value }))}
+              onChange={(e) => {
+                setError("");
+                setForm((prev) => ({ ...prev, message: e.target.value }));
+              }}
               placeholder="Describe scope, milestones, timeline, and why you're a fit (min 20 chars)."
             />
             <div className="muted" style={{ marginTop: 6 }}>
