@@ -13,7 +13,7 @@ function formatMoney(value) {
   const amount = Number(value || 0);
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "THB",
     maximumFractionDigits: 0,
   }).format(Number.isFinite(amount) ? amount : 0);
 }
@@ -48,6 +48,8 @@ export default function ClientContracts() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
   const [creating, setCreating] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [query, setQuery] = useState("");
   const [form, setForm] = useState(DEFAULT_CREATE);
 
   const load = async () => {
@@ -76,6 +78,29 @@ export default function ClientContracts() {
     }
     return out;
   }, [items]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    return items.filter((item) => {
+      const status = normalizeStatus(item.status);
+      if (statusFilter !== "all" && status !== statusFilter) return false;
+
+      if (!q) return true;
+
+      const fields = [
+        item.jobTitle,
+        item.jobId,
+        item.freelancerId,
+        item.freelancerName,
+        item.clientId,
+      ]
+        .map((v) => String(v || "").toLowerCase())
+        .join(" ");
+
+      return fields.includes(q);
+    });
+  }, [items, query, statusFilter]);
 
   const updateForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -125,22 +150,6 @@ export default function ClientContracts() {
     setError("");
     try {
       await contractService.update(id, { status: "cancelled" });
-      await load();
-    } catch (err) {
-      setError(err);
-    } finally {
-      setBusyId("");
-    }
-  };
-
-  const deleteContract = async (id) => {
-    const confirmed = window.confirm("Delete this contract permanently?");
-    if (!confirmed) return;
-
-    setBusyId(id);
-    setError("");
-    try {
-      await contractService.remove(id);
       await load();
     } catch (err) {
       setError(err);
@@ -212,7 +221,7 @@ export default function ClientContracts() {
             </div>
 
             <div>
-              <label className="block mb-1">Amount (USD)</label>
+              <label className="block mb-1">Amount (THB)</label>
               <input
                 className="input"
                 type="number"
@@ -234,8 +243,25 @@ export default function ClientContracts() {
       </div>
 
       <div className="card">
-        <div className="muted" style={{ marginBottom: 8 }}>
-          Total: {items.length} • Active: {stats.active} • Completed: {stats.completed} • Cancelled: {stats.cancelled}
+        <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+          <div className="muted">
+            Total: {items.length} • Active: {stats.active} • Completed: {stats.completed} • Cancelled: {stats.cancelled}
+          </div>
+          <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+            <input
+              className="input"
+              placeholder="Search contracts..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ minWidth: 220 }}
+            />
+            <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">All status</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
         </div>
 
         <table className="table">
@@ -247,11 +273,12 @@ export default function ClientContracts() {
               <th>Status</th>
               <th>Start</th>
               <th>End</th>
-              <th style={{ width: 280 }}>Actions</th>
+              <th>Delivery</th>
+              <th style={{ width: 220 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((contract) => {
+            {filtered.map((contract) => {
               const id = contract._id || contract.contractId;
               const status = normalizeStatus(contract.status);
 
@@ -265,6 +292,28 @@ export default function ClientContracts() {
                   </td>
                   <td>{formatDate(contract.startDate)}</td>
                   <td>{formatDate(contract.endDate)}</td>
+                  <td>
+                    {contract.delivery?.link ? (
+                      <div>
+                        <a href={contract.delivery.link} target="_blank" rel="noreferrer">
+                          Delivery Link
+                        </a>
+                      </div>
+                    ) : null}
+                    {contract.delivery?.attachment?.name ? (
+                      <div>
+                        <a href={contract.delivery.attachment.dataUrl} download={contract.delivery.attachment.name}>
+                          {contract.delivery.attachment.name}
+                        </a>
+                      </div>
+                    ) : null}
+                    {contract.delivery?.notes ? (
+                      <div className="muted" style={{ maxWidth: 240, whiteSpace: "pre-wrap" }}>
+                        {contract.delivery.notes}
+                      </div>
+                    ) : null}
+                    {!contract.delivery?.link && !contract.delivery?.attachment?.name && !contract.delivery?.notes ? "-" : null}
+                  </td>
                   <td>
                     <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
                       <button
@@ -284,25 +333,16 @@ export default function ClientContracts() {
                       >
                         Cancel
                       </button>
-
-                      <button
-                        type="button"
-                        className="btn btnDanger"
-                        disabled={busyId === id}
-                        onClick={() => deleteContract(id)}
-                      >
-                        Delete
-                      </button>
                     </div>
                   </td>
                 </tr>
               );
             })}
 
-            {items.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
-                <td colSpan="7" className="muted">
-                  No contracts yet.
+                <td colSpan="8" className="muted">
+                  No contracts found for the current filter.
                 </td>
               </tr>
             )}

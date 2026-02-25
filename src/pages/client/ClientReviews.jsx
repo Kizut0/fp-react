@@ -49,6 +49,8 @@ export default function ClientReviews() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [ratingFilter, setRatingFilter] = useState("all");
+  const [query, setQuery] = useState("");
   const [form, setForm] = useState(DEFAULT_FORM);
 
   const load = async () => {
@@ -113,6 +115,29 @@ export default function ClientReviews() {
     const total = reviews.reduce((sum, review) => sum + Number(review?.rating || 0), 0);
     return { avgRating: total / reviews.length };
   }, [reviews]);
+
+  const filteredReviews = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    return reviews.filter((review) => {
+      const rating = Number(review?.rating || 0);
+      if (ratingFilter !== "all" && String(rating) !== ratingFilter) return false;
+
+      if (!q) return true;
+      const linkedContract = contractById.get(normalizeId(review?.contractId)) || null;
+      const fields = [
+        review.comment,
+        review.revieweeId,
+        review.revieweeName,
+        review.contractId,
+        linkedContract?.jobTitle,
+      ]
+        .map((v) => String(v || "").toLowerCase())
+        .join(" ");
+
+      return fields.includes(q);
+    });
+  }, [contractById, query, ratingFilter, reviews]);
 
   const updateForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -269,8 +294,27 @@ export default function ClientReviews() {
       </div>
 
       <div className="card">
-        <div className="muted" style={{ marginBottom: 8 }}>
-          Reviews submitted: {reviews.length} • Average rating: {stats.avgRating ? stats.avgRating.toFixed(1) : "0.0"}
+        <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+          <div className="muted">
+            Reviews submitted: {reviews.length} • Average rating: {stats.avgRating ? stats.avgRating.toFixed(1) : "0.0"}
+          </div>
+          <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+            <input
+              className="input"
+              placeholder="Search reviews..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ minWidth: 220 }}
+            />
+            <select className="input" value={ratingFilter} onChange={(e) => setRatingFilter(e.target.value)}>
+              <option value="all">All ratings</option>
+              <option value="5">5 stars</option>
+              <option value="4">4 stars</option>
+              <option value="3">3 stars</option>
+              <option value="2">2 stars</option>
+              <option value="1">1 star</option>
+            </select>
+          </div>
         </div>
 
         <table className="table">
@@ -284,7 +328,7 @@ export default function ClientReviews() {
             </tr>
           </thead>
           <tbody>
-            {reviews.map((review, idx) => {
+            {filteredReviews.map((review, idx) => {
               const id = normalizeId(review?._id || review?.reviewId) || `${normalizeId(review?.contractId)}-${idx}`;
               const linkedContract = contractById.get(normalizeId(review?.contractId)) || null;
 
@@ -301,10 +345,10 @@ export default function ClientReviews() {
               );
             })}
 
-            {reviews.length === 0 && (
+            {filteredReviews.length === 0 && (
               <tr>
                 <td colSpan="5" className="muted">
-                  No reviews submitted yet.
+                  No reviews match the current filter.
                 </td>
               </tr>
             )}

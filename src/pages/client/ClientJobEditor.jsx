@@ -241,7 +241,7 @@ export default function ClientJobEditor({ mode = "create" }) {
 
             <div className="grid2">
               <div>
-                <label className="block mb-1">Budget (USD)</label>
+                <label className="block mb-1">Budget (THB)</label>
                 <input
                   className="input"
                   type="number"

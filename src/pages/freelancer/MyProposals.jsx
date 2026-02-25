@@ -15,7 +15,7 @@ function formatMoney(value) {
   const amount = Number(value || 0);
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "THB",
     maximumFractionDigits: 0,
   }).format(Number.isFinite(amount) ? amount : 0);
 }
@@ -45,6 +45,9 @@ export default function MyProposals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("newest");
 
   const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState({
@@ -160,6 +163,36 @@ export default function MyProposals() {
     return out;
   }, [items]);
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    let rows = items.filter((item) => {
+      const status = normalizeStatus(item.status);
+      if (statusFilter !== "all" && status !== statusFilter) return false;
+      if (!q) return true;
+
+      const fields = [
+        item.jobTitle,
+        item.jobId,
+        item.message,
+        item.status,
+      ]
+        .map((v) => String(v || "").toLowerCase())
+        .join(" ");
+
+      return fields.includes(q);
+    });
+
+    rows = rows.slice().sort((a, b) => {
+      if (sort === "oldest") return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      if (sort === "bidHigh") return Number(b.price || 0) - Number(a.price || 0);
+      if (sort === "bidLow") return Number(a.price || 0) - Number(b.price || 0);
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
+    return rows;
+  }, [items, query, sort, statusFilter]);
+
   if (loading) return <Loading />;
 
   return (
@@ -199,7 +232,7 @@ export default function MyProposals() {
             </div>
 
             <div>
-              <label className="block mb-1">Bid Price (USD)</label>
+              <label className="block mb-1">Bid Price (THB)</label>
               <input
                 className="input"
                 type="number"
@@ -239,8 +272,32 @@ export default function MyProposals() {
       </div>
 
       <div className="card">
-        <div className="muted" style={{ marginBottom: 8 }}>
-          Total: {items.length} • Submitted: {proposalStats.submitted} • Accepted: {proposalStats.accepted} • Rejected: {proposalStats.rejected}
+        <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+          <div className="muted">
+            Total: {items.length} • Submitted: {proposalStats.submitted} • Accepted: {proposalStats.accepted} • Rejected: {proposalStats.rejected}
+          </div>
+          <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+            <input
+              className="input"
+              placeholder="Search proposals..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ minWidth: 220 }}
+            />
+            <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">All statuses</option>
+              <option value="submitted">Submitted</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+              <option value="withdrawn">Withdrawn</option>
+            </select>
+            <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="bidHigh">Bid: High to Low</option>
+              <option value="bidLow">Bid: Low to High</option>
+            </select>
+          </div>
         </div>
 
         <table className="table">
@@ -255,7 +312,7 @@ export default function MyProposals() {
             </tr>
           </thead>
           <tbody>
-            {items.map((proposal) => {
+            {filtered.map((proposal) => {
               const id = proposal._id || proposal.proposalId;
               const status = normalizeStatus(proposal.status);
               const editable = status === "submitted";
@@ -283,7 +340,7 @@ export default function MyProposals() {
                       <button
                         type="button"
                         className="btn btnDanger"
-                        disabled={saving}
+                        disabled={!editable || saving}
                         onClick={() => withdraw(id)}
                       >
                         Withdraw
@@ -294,10 +351,10 @@ export default function MyProposals() {
               );
             })}
 
-            {items.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
                 <td colSpan="6" className="muted">
-                  No proposals yet.
+                  No proposals found for this filter.
                 </td>
               </tr>
             )}

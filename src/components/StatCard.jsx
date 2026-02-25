@@ -1,13 +1,14 @@
 
-
 export default function StatCard({
   title,
+  label,
   value,
   icon,
   trend,
   trendValue,
   className = "",
 }) {
+  const heading = title || label || "";
   const trendColor =
     trend === "up"
       ? "text-green-600"
@@ -23,7 +24,7 @@ export default function StatCard({
       className={`bg-white shadow-md rounded-xl p-5 flex justify-between items-center ${className}`}
     >
       <div>
-        <h4 className="text-sm text-gray-500">{title}</h4>
+        <h4 className="text-sm text-gray-500">{heading}</h4>
         <p className="text-2xl font-bold mt-1">{value}</p>
 
         {trend && (

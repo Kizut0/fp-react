@@ -18,6 +18,7 @@ import ClientJobEditor from "../pages/client/ClientJobEditor";
 import ClientJobDetail from "../pages/client/ClientJobDetail";
 import ClientProposals from "../pages/client/ClientProposals";
 import ClientContracts from "../pages/client/ClientContracts";
+import ClientJobComplete from "../pages/client/ClientJobComplete";
 import ClientPayments from "../pages/client/ClientPayments";
 import ClientReviews from "../pages/client/ClientReviews";
 
@@ -25,6 +26,7 @@ import FreelancerDashboard from "../pages/freelancer/FreelancerDashboard";
 import BrowseJobs from "../pages/freelancer/BrowseJobs";
 import MyProposals from "../pages/freelancer/MyProposals";
 import FreelancerContracts from "../pages/freelancer/FreelancerContracts";
+import FreelancerJobComplete from "../pages/freelancer/FreelancerJobComplete";
 import FreelancerPayments from "../pages/freelancer/FreelancerPayments";
 import FreelancerReviews from "../pages/freelancer/FreelancerReviews";
 
@@ -67,6 +69,7 @@ export const routes = [
                     { path: "jobs/:jobId", element: <ClientJobDetail /> },
                     { path: "proposals", element: <ClientProposals /> },
                     { path: "contracts", element: <ClientContracts /> },
+                    { path: "job-complete", element: <ClientJobComplete /> },
                     { path: "payments", element: <ClientPayments /> },
                     { path: "reviews", element: <ClientReviews /> },
                 ],
@@ -85,6 +88,7 @@ export const routes = [
                     { path: "browse", element: <BrowseJobs /> },
                     { path: "proposals", element: <MyProposals /> },
                     { path: "contracts", element: <FreelancerContracts /> },
+                    { path: "job-complete", element: <FreelancerJobComplete /> },
                     { path: "payments", element: <FreelancerPayments /> },
                     { path: "reviews", element: <FreelancerReviews /> },
                 ],
