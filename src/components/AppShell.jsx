@@ -14,11 +14,11 @@ export default function AppShell({ children }) {
   const showSidebar = Boolean(user && isPrivateRoute);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col appShell">
       <NavBar />
-      <div className="flex flex-1">
+      <div className="flex flex-1 appShellBody">
         {showSidebar && <SideBar />}
-        <main className="flex-1 p-6 bg-gray-50">
+        <main className="flex-1 p-6 appMain">
           {children ?? <Outlet />}
         </main>
       </div>

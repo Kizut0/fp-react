@@ -8,17 +8,25 @@ export default function NavBar() {
     : "/";
 
   return (
-    <nav className="bg-blue-600 text-white px-6 py-3 flex justify-between">
-      <Link to={dashboardPath} className="font-bold text-lg text-white">
+    <nav className="appNav">
+      <Link
+        to={dashboardPath}
+        className="appNavBrand"
+        style={{
+          position: "absolute",
+          left: "50%",
+          transform: "translateX(-50%)",
+        }}
+      >
         Freelance Hub
       </Link>
 
-      <div className="flex items-center gap-4">
-        {user && <span>{user.name || "Account"}</span>}
+      <div className="appNavActions" style={{ zIndex: 1 }}>
+        {user && <span className="appNavUser">{user.name || "Account"}</span>}
         {user && (
           <button
             onClick={logout}
-            className="bg-white text-blue-600 px-3 py-1 rounded"
+            className="btn btnGhost"
           >
             Logout
           </button>
