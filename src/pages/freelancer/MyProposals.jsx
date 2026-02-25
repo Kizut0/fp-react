@@ -340,7 +340,7 @@ export default function MyProposals() {
                       <button
                         type="button"
                         className="btn btnDanger"
-                        disabled={saving}
+                        disabled={!editable || saving}
                         onClick={() => withdraw(id)}
                       >
                         Withdraw

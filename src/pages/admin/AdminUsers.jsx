@@ -8,6 +8,17 @@ function normalize(value) {
     return String(value || "").trim().toLowerCase();
 }
 
+function normalizeStatus(value) {
+    const raw = normalize(value || "active");
+    if (["deactive", "deactivated", "inactive"].includes(raw)) return "deactive";
+    return raw || "active";
+}
+
+function getWithdrawCount(user) {
+    const value = Number(user?.withdrawCount ?? 0);
+    return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
 export default function AdminUsers() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -56,13 +67,13 @@ export default function AdminUsers() {
 
         return items.filter((user) => {
             const role = normalize(user.role);
-            const status = normalize(user.status || "active");
+            const status = normalizeStatus(user.status);
 
             if (roleFilter !== "all" && role !== roleFilter) return false;
             if (statusFilter !== "all" && status !== statusFilter) return false;
             if (!q) return true;
 
-            const fields = [user.name, user.email, user.role, user.status]
+            const fields = [user.name, user.email, user.role, status, getWithdrawCount(user)]
                 .map((v) => String(v || "").toLowerCase())
                 .join(" ");
 
@@ -102,20 +113,24 @@ export default function AdminUsers() {
                             <option value="all">All status</option>
                             <option value="active">Active</option>
                             <option value="blocked">Blocked</option>
+                            <option value="deactive">Deactive</option>
                         </select>
                     </div>
                 </div>
                 <table className="table">
-                    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th style={{ width: 360 }}>Actions</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Withdraw Count</th><th style={{ width: 360 }}>Actions</th></tr></thead>
                     <tbody>
                         {filtered.map((u) => {
                             const id = u._id || u.userId;
+                            const role = normalize(u.role);
+                            const status = normalizeStatus(u.status);
                             return (
                                 <tr key={id}>
                                     <td>{u.name}</td>
                                     <td className="muted">{u.email}</td>
                                     <td><span className="badge">{u.role}</span></td>
-                                    <td><span className="badge">{u.status || "active"}</span></td>
+                                    <td><span className="badge">{status}</span></td>
+                                    <td>{role === "freelancer" ? getWithdrawCount(u) : "-"}</td>
                                     <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                         <button className="btn btnOk" disabled={busyId === id} onClick={() => setStatus(id, "active")}>Verify/Activate</button>
                                         <button className="btn btnDanger" disabled={busyId === id} onClick={() => setStatus(id, "blocked")}>Block</button>
@@ -124,7 +139,7 @@ export default function AdminUsers() {
                                 </tr>
                             );
                         })}
-                        {filtered.length === 0 && <tr><td colSpan="5" className="muted">No users found for this filter.</td></tr>}
+                        {filtered.length === 0 && <tr><td colSpan="6" className="muted">No users found for this filter.</td></tr>}
                     </tbody>
                 </table>
             </div>
