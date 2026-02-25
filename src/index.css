@@ -164,6 +164,36 @@ select {
   background: #b91c1c;
 }
 
+.btnGhost {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.btnGhost:hover {
+  background: #f8fafc;
+}
+
+.btnInfo {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.btnInfo:hover {
+  background: #dbeafe;
+}
+
+.btnWarn {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #ffffff;
+}
+
+.btnWarn:hover {
+  background: #d97706;
+}
+
 .input,
 .textarea {
   width: 100%;
@@ -183,6 +213,19 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.jobActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(104px, 1fr));
+  gap: 8px;
+  min-width: 224px;
+}
+
+.jobActions .btn {
+  width: 100%;
+  min-height: 38px;
+  font-weight: 600;
 }
 
 .statCard {

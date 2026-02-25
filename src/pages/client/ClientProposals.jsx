@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { contractService } from "../../services/contractService";
 import ErrorBox from "../../components/ErrorBox";
 import Loading from "../../components/Loading";
@@ -37,6 +37,7 @@ function normalizeStatus(value) {
 }
 
 export default function ClientProposals() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -107,8 +108,14 @@ export default function ClientProposals() {
     setBusyId(id);
     setError("");
     try {
-      await proposalService.accept(id);
-      await load();
+      const result = await proposalService.accept(id);
+      const contractId = result?.contract?._id || result?.contract?.contractId || "";
+      navigate(
+        contractId
+          ? `/client/contracts?contractId=${encodeURIComponent(String(contractId))}`
+          : "/client/contracts"
+      );
+      return;
     } catch (err) {
       setError(err);
     } finally {
@@ -133,8 +140,14 @@ export default function ClientProposals() {
     setBusyId(proposalId);
     setError("");
     try {
-      await contractService.create({ proposalId });
-      await load();
+      const result = await contractService.create({ proposalId });
+      const contractId = result?._id || result?.contractId || "";
+      navigate(
+        contractId
+          ? `/client/contracts?contractId=${encodeURIComponent(String(contractId))}`
+          : "/client/contracts"
+      );
+      return;
     } catch (err) {
       setError(err);
     } finally {

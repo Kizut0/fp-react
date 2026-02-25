@@ -213,7 +213,7 @@ export default function ClientJobs() {
                 <th>Posted</th>
                 <th>Proposals</th>
                 <th>Status</th>
-                <th style={{ width: 220 }}>Actions</th>
+                <th style={{ width: 260 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -228,20 +228,20 @@ export default function ClientJobs() {
                     <span className="badge">{job.status || "open"}</span>
                   </td>
                   <td>
-                    <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
-                      <Link to={`/client/jobs/${job._id || job.jobId}`} className="btn">
+                    <div className="jobActions">
+                      <Link to={`/client/jobs/${job._id || job.jobId}`} className="btn btnGhost">
                         View
                       </Link>
-                      <Link to={`/client/jobs/${job._id || job.jobId}/edit`} className="btn">
+                      <Link to={`/client/jobs/${job._id || job.jobId}/edit`} className="btn btnInfo">
                         Edit
                       </Link>
                       <button
                         type="button"
-                        className="btn"
+                        className={`btn ${normalizeStatus(job.status) === "open" ? "btnWarn" : "btnOk"}`}
                         disabled={busyId === (job._id || job.jobId)}
                         onClick={() => toggleJobStatus(job)}
                       >
-                        {normalizeStatus(job.status) === "open" ? "Close" : "Reopen"}
+                        {normalizeStatus(job.status) === "open" ? "Close Job" : "Reopen"}
                       </button>
                       <button
                         type="button"
