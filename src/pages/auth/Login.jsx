@@ -8,27 +8,15 @@ function normalizeRole(value) {
   return role;
 }
 
-function roleLabel(role) {
-  if (role === "admin") return "Admin";
-  if (role === "client") return "Client";
-  return "Freelancer";
-}
-
 function roleRoute(role) {
   if (role === "admin") return "/admin/dashboard";
   if (role === "client") return "/client/dashboard";
   return "/freelancer/dashboard";
 }
 
-const ROLE_OPTIONS = [
-  { key: "freelancer", title: "Freelancer", buttonClass: "btnOk" },
-  { key: "client", title: "Client", buttonClass: "btnInfo" },
-  { key: "admin", title: "Admin", buttonClass: "" },
-];
-
 export default function Login() {
   const navigate = useNavigate();
-  const { login, logout } = useAuth();
+  const { login } = useAuth();
 
   const [form, setForm] = useState({
     email: "",
@@ -37,7 +25,6 @@ export default function Login() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [activeRole, setActiveRole] = useState("");
   const [fieldErrors, setFieldErrors] = useState({
     email: "",
     password: "",
@@ -58,22 +45,16 @@ export default function Login() {
     }));
   };
 
-  const handleSubmit = async (expectedRole) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
     try {
-      setActiveRole(expectedRole);
       setLoading(true);
       setError("");
       setFieldErrors({ email: "", password: "" });
 
       const data = await login(form);
       const accountRole = normalizeRole(data?.user?.role);
-
-      if (accountRole !== expectedRole) {
-        logout();
-        setError(`This account is ${roleLabel(accountRole)}. Please use the correct role login button.`);
-        return;
-      }
-
       navigate(roleRoute(accountRole));
     } catch (err) {
       const apiMessage = err.response?.data?.message;
@@ -91,7 +72,6 @@ export default function Login() {
       }
     } finally {
       setLoading(false);
-      setActiveRole("");
     }
   };
 
@@ -108,32 +88,7 @@ export default function Login() {
           </div>
         )}
 
-        <form
-          className="row"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit("freelancer");
-          }}
-        >
-          <div>
-            <div className="grid3" style={{ marginTop: 4 }}>
-              {ROLE_OPTIONS.map((role) => {
-                const isSelected = activeRole === role.key;
-                return (
-                  <button
-                    key={role.key}
-                    type="button"
-                    className={`btn ${role.buttonClass} w-full`.trim()}
-                    style={isSelected ? { outline: "3px solid rgba(37, 99, 235, 0.2)" } : undefined}
-                    disabled={loading}
-                    onClick={() => setActiveRole(role.key)}
-                  >
-                    {role.title}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        <form className="row" onSubmit={handleSubmit}>
 
           <div>
             <label className="block mb-1">Email</label>
@@ -167,12 +122,7 @@ export default function Login() {
             )}
           </div>
 
-          <button
-            type="button"
-            className={`btn btnOk w-full`}
-            disabled={loading || !activeRole}
-            onClick={() => handleSubmit(activeRole || "freelancer")}
-          >
+          <button type="submit" className="btn btnOk w-full" disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
@@ -187,3 +137,4 @@ export default function Login() {
     </div>
   );
 }
+
