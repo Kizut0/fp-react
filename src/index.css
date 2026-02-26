@@ -472,12 +472,17 @@ select.input:focus {
 .appSidebarRole {
   font-size: 0.88rem;
   font-weight: 700;
-  color: #7a4d2a;
+  color: #234a98;
 }
 
 .appSidebarHint {
   font-size: 0.78rem;
   color: #8c725a;
+}
+
+.appSidebarRoleIcon {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .appSidebarNav {
@@ -490,6 +495,59 @@ select.input:focus {
 
 .appMain .row {
   max-width: 1320px;
+}
+
+.roleOptionGrid {
+  margin-top: 6px;
+}
+
+.roleOption {
+  border: 1px solid #d3dceb;
+  border-radius: 12px;
+  min-height: 84px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #12203a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 160ms ease, transform 120ms ease, background-color 160ms ease;
+}
+
+.roleOption:hover {
+  border-color: #8ab0ef;
+  background: #f6f9ff;
+  box-shadow: 0 10px 20px rgba(30, 64, 175, 0.09);
+  transform: translateY(-1px);
+}
+
+.roleOptionActive {
+  border-color: #4e87ea;
+  background: linear-gradient(180deg, #eef5ff 0%, #deebff 100%);
+  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2);
+}
+
+.roleOptionIcon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.roleOptionLabel {
+  font-weight: 700;
+}
+
+.roleBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roleBadgeIcon {
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 /* Utility classes already used in JSX */
