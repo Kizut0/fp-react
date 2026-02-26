@@ -74,4 +74,21 @@ export const contractService = {
     });
     return data;
   },
+
+  async openDispute(id, reason) {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/dispute`, {
+      action: "open",
+      reason,
+    });
+    return data;
+  },
+
+  async resolveDispute(id, decision, resolutionNote = "") {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/dispute`, {
+      action: "resolve",
+      decision,
+      resolutionNote,
+    });
+    return data;
+  },
 };

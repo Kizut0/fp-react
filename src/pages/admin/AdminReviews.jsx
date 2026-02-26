@@ -5,6 +5,18 @@ import ConfirmButton from "../../components/ConfirmButton";
 import { adminService } from "../../services/adminService";
 import { reviewService } from "../../services/reviewService";
 
+function normalizeId(value) {
+    if (value === undefined || value === null) return "";
+    if (typeof value === "string") return value.trim();
+    if (typeof value === "number") return String(value);
+    if (typeof value === "object") {
+        if (typeof value.$oid === "string") return value.$oid.trim();
+        if (typeof value.id === "string") return value.id.trim();
+        if (typeof value._id === "string") return value._id.trim();
+    }
+    return "";
+}
+
 export default function AdminReviews() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -22,6 +34,22 @@ export default function AdminReviews() {
     };
 
     useEffect(() => { load(); }, []);
+
+    const removeReview = async (id) => {
+        if (!id) {
+            setErr(new Error("Missing review id"));
+            return;
+        }
+
+        try {
+            setErr(null);
+            await reviewService.remove(id);
+            await load();
+        } catch (error) {
+            setErr(error);
+            throw error;
+        }
+    };
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -66,10 +94,10 @@ export default function AdminReviews() {
                     </div>
                 </div>
                 <table className="table">
-                    <thead><tr><th>Contract</th><th>Reviewer</th><th>Reviewee</th><th>Rating</th><th>Comment</th><th style={{ width: 140 }}>Actions</th></tr></thead>
+                    <thead><tr><th>Contract</th><th>Reviewer</th><th>Reviews</th><th>Rating</th><th>Comment</th><th style={{ width: 140 }}>Actions</th></tr></thead>
                     <tbody>
                         {filtered.map((r) => {
-                            const id = r._id || r.reviewId;
+                            const id = normalizeId(r._id) || normalizeId(r.reviewId);
                             return (
                                 <tr key={id}>
                                     <td>{r.contractId}</td>
@@ -78,7 +106,7 @@ export default function AdminReviews() {
                                     <td><span className="badge">{r.rating}</span></td>
                                     <td style={{ whiteSpace: "pre-wrap" }}>{r.comment}</td>
                                     <td>
-                                        <ConfirmButton onConfirm={() => reviewService.remove(id).then(load)}>Delete</ConfirmButton>
+                                        <ConfirmButton disabled={!id} onConfirm={() => removeReview(id)}>Delete</ConfirmButton>
                                     </td>
                                 </tr>
                             );

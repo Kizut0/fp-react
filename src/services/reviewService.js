@@ -32,7 +32,8 @@ export const reviewService = {
   },
 
   async remove(id) {
-    const { data } = await apiClient.delete(`${endpoints.REVIEWS}/${id}`);
+    const safeId = encodeURIComponent(String(id || "").trim());
+    const { data } = await apiClient.delete(`${endpoints.REVIEWS}/${safeId}`);
     return data;
   },
 };
