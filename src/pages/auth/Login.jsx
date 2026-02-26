@@ -1,18 +1,43 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
- 
+
+function normalizeRole(value) {
+  const role = String(value || "").trim().toLowerCase();
+  if (role === "freelance") return "freelancer";
+  return role;
+}
+
+function roleLabel(role) {
+  if (role === "admin") return "Admin";
+  if (role === "client") return "Client";
+  return "Freelancer";
+}
+
+function roleRoute(role) {
+  if (role === "admin") return "/admin/dashboard";
+  if (role === "client") return "/client/dashboard";
+  return "/freelancer/dashboard";
+}
+
+const ROLE_OPTIONS = [
+  { key: "freelancer", title: "Freelancer", buttonClass: "btnOk" },
+  { key: "client", title: "Client", buttonClass: "btnInfo" },
+  { key: "admin", title: "Admin", buttonClass: "" },
+];
+
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
- 
+  const { login, logout } = useAuth();
+
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
- 
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [activeRole, setActiveRole] = useState("");
   const [fieldErrors, setFieldErrors] = useState({
     email: "",
     password: "",
@@ -33,19 +58,23 @@ export default function Login() {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const handleSubmit = async (expectedRole) => {
     try {
+      setActiveRole(expectedRole);
       setLoading(true);
       setError("");
       setFieldErrors({ email: "", password: "" });
 
       const data = await login(form);
-      const role = String(data?.user?.role || "").toLowerCase();
-      if (role === "admin") navigate("/admin/dashboard");
-      else if (role === "client") navigate("/client/dashboard");
-      else navigate("/freelancer/dashboard");
+      const accountRole = normalizeRole(data?.user?.role);
+
+      if (accountRole !== expectedRole) {
+        logout();
+        setError(`This account is ${roleLabel(accountRole)}. Please use the correct role login button.`);
+        return;
+      }
+
+      navigate(roleRoute(accountRole));
     } catch (err) {
       const apiMessage = err.response?.data?.message;
       const apiField = String(err.response?.data?.field || "").trim();
@@ -62,25 +91,51 @@ export default function Login() {
       }
     } finally {
       setLoading(false);
+      setActiveRole("");
     }
   };
- 
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="card" style={{ width: "100%", maxWidth: 760, padding: 24 }}>
+        <h1 className="h1" style={{ textAlign: "center", marginBottom: 6 }}>
           Login
         </h1>
- 
+
         {warningMessage && (
-          <div className="bg-red-100 text-red-700 p-3 rounded mb-4 flex items-center gap-2">
-            <span aria-hidden="true">⚠</span>
+          <div className="card" style={{ background: "#fef2f2", color: "#b91c1c", borderColor: "#fecaca", marginBottom: 10 }}>
             <span>{warningMessage}</span>
           </div>
         )}
- 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
+
+        <form
+          className="row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit("freelancer");
+          }}
+        >
+          <div>
+            <div className="grid3" style={{ marginTop: 4 }}>
+              {ROLE_OPTIONS.map((role) => {
+                const isSelected = activeRole === role.key;
+                return (
+                  <button
+                    key={role.key}
+                    type="button"
+                    className={`btn ${role.buttonClass} w-full`.trim()}
+                    style={isSelected ? { outline: "3px solid rgba(37, 99, 235, 0.2)" } : undefined}
+                    disabled={loading}
+                    onClick={() => setActiveRole(role.key)}
+                  >
+                    {role.title}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
             <label className="block mb-1">Email</label>
             <input
               type="email"
@@ -88,14 +143,15 @@ export default function Login() {
               required
               value={form.email}
               onChange={handleChange}
-              className={`w-full border px-3 py-2 rounded ${fieldErrors.email ? "border-red-500" : ""}`}
+              className="input"
+              style={fieldErrors.email ? { borderColor: "#ef4444" } : undefined}
             />
             {fieldErrors.email && (
-              <p className="text-red-600 text-sm mt-1">⚠ {fieldErrors.email}</p>
+              <p style={{ color: "#dc2626", fontSize: 13, marginTop: 6 }}>{fieldErrors.email}</p>
             )}
           </div>
 
-          <div className="mb-6">
+          <div>
             <label className="block mb-1">Password</label>
             <input
               type="password"
@@ -103,31 +159,27 @@ export default function Login() {
               required
               value={form.password}
               onChange={handleChange}
-              className={`w-full border px-3 py-2 rounded ${fieldErrors.password ? "border-red-500" : ""}`}
+              className="input"
+              style={fieldErrors.password ? { borderColor: "#ef4444" } : undefined}
             />
             {fieldErrors.password && (
-              <p className="text-red-600 text-sm mt-1">⚠ {fieldErrors.password}</p>
+              <p style={{ color: "#dc2626", fontSize: 13, marginTop: 6 }}>{fieldErrors.password}</p>
             )}
           </div>
- 
+
           <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-2 rounded text-white ${loading
-              ? "bg-gray-400"
-              : "bg-blue-600 hover:bg-blue-700"
-              }`}
+            type="button"
+            className={`btn btnOk w-full`}
+            disabled={loading || !activeRole}
+            onClick={() => handleSubmit(activeRole || "freelancer")}
           >
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
- 
-        <p className="text-sm mt-4 text-center">
+
+        <p className="muted" style={{ marginTop: 14, textAlign: "center" }}>
           Don’t have an account?{" "}
-          <Link
-            to="/register"
-            className="text-blue-600 hover:underline"
-          >
+          <Link to="/register">
             Register
           </Link>
         </p>
@@ -135,5 +187,3 @@ export default function Login() {
     </div>
   );
 }
- 
- 

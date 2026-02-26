@@ -6,19 +6,26 @@ export default function NavBar() {
   const dashboardPath = user
     ? `/${String(user.role || "").toLowerCase()}/dashboard`
     : "/";
+  const userName = String(user?.name || "Account").trim();
+  const initial = userName ? userName[0].toUpperCase() : "A";
 
   return (
-    <nav className="bg-blue-600 text-white px-6 py-3 flex justify-between">
-      <Link to={dashboardPath} className="font-bold text-lg text-white">
+    <nav className="appNav">
+      <Link to={dashboardPath} className="appNavBrand">
         Freelance Hub
       </Link>
 
-      <div className="flex items-center gap-4">
-        {user && <span>{user.name || "Account"}</span>}
+      <div className="appNavActions">
+        {user && (
+          <span className="appNavUser">
+            <span className="appNavInitial" aria-hidden="true">{initial}</span>
+            <span>{userName}</span>
+          </span>
+        )}
         {user && (
           <button
             onClick={logout}
-            className="bg-white text-blue-600 px-3 py-1 rounded"
+            className="btn btnGhost"
           >
             Logout
           </button>

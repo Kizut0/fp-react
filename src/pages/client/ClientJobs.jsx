@@ -20,6 +20,15 @@ function formatMoney(value) {
   }).format(Number.isFinite(amount) ? amount : 0);
 }
 
+function renderBudget(job) {
+  const remaining = Number(job?.budget || 0);
+  const original = Number(job?.budgetOriginal || remaining);
+  const hasReduction = Number.isFinite(original) && Number.isFinite(remaining) && original > remaining;
+
+  if (!hasReduction) return formatMoney(remaining);
+  return `${formatMoney(remaining)} / ${formatMoney(original)}`;
+}
+
 function extractJobDate(job) {
   return job?.createdAt || job?.postedAt || job?.postedDate || job?.date || null;
 }
@@ -213,7 +222,7 @@ export default function ClientJobs() {
                 <th>Posted</th>
                 <th>Proposals</th>
                 <th>Status</th>
-                <th style={{ width: 220 }}>Actions</th>
+                <th style={{ width: 260 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -221,27 +230,27 @@ export default function ClientJobs() {
                 <tr key={job._id || job.jobId}>
                   <td>{job.title}</td>
                   <td>{job.category || "General"}</td>
-                  <td>{formatMoney(job.budget)}</td>
+                  <td>{renderBudget(job)}</td>
                   <td>{formatDate(extractJobDate(job))}</td>
                   <td>{Number(job.proposalsCount || 0)}</td>
                   <td>
                     <span className="badge">{job.status || "open"}</span>
                   </td>
                   <td>
-                    <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
-                      <Link to={`/client/jobs/${job._id || job.jobId}`} className="btn">
+                    <div className="jobActions">
+                      <Link to={`/client/jobs/${job._id || job.jobId}`} className="btn btnGhost">
                         View
                       </Link>
-                      <Link to={`/client/jobs/${job._id || job.jobId}/edit`} className="btn">
+                      <Link to={`/client/jobs/${job._id || job.jobId}/edit`} className="btn btnInfo">
                         Edit
                       </Link>
                       <button
                         type="button"
-                        className="btn"
+                        className={`btn ${normalizeStatus(job.status) === "open" ? "btnWarn" : "btnOk"}`}
                         disabled={busyId === (job._id || job.jobId)}
                         onClick={() => toggleJobStatus(job)}
                       >
-                        {normalizeStatus(job.status) === "open" ? "Close" : "Reopen"}
+                        {normalizeStatus(job.status) === "open" ? "Close Job" : "Reopen"}
                       </button>
                       <button
                         type="button"

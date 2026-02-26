@@ -44,8 +44,12 @@ export default function SideBar() {
   const links = user ? linksByRole[user.role] || publicLinks : publicLinks;
 
   return (
-    <aside className="w-64 bg-white border-r p-4">
-      <nav className="flex flex-col gap-3">
+    <aside className="appSidebar">
+      <div className="appSidebarMeta">
+        <div className="appSidebarRole">{user?.role || "Workspace"}</div>
+        <div className="appSidebarHint">Navigation</div>
+      </div>
+      <nav className="flex flex-col gap-3 appSidebarNav">
         {links.map((link) => (
           <NavLink
             key={link.to}
