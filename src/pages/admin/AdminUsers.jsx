@@ -20,6 +20,16 @@ function getWithdrawCount(user) {
     return Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
+function askModerationReason(actionLabel, user) {
+    const target = String(user?.email || user?.name || "this user").trim();
+    const reason = window.prompt(
+        `Reason to ${actionLabel} ${target} (required):`,
+        ""
+    );
+    if (typeof reason !== "string") return "";
+    return reason.trim();
+}
+
 export default function AdminUsers() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -43,11 +53,23 @@ export default function AdminUsers() {
 
     useEffect(() => { load(); }, []);
 
-    const setStatus = async (id, status) => {
+    const setStatus = async (user, status, actionLabel) => {
+        const id = user?._id || user?.userId;
+        if (!id) return;
+
+        const reason = askModerationReason(actionLabel || status, user);
+        if (!reason) {
+            setErr({ message: "Reason is required for moderation actions." });
+            return;
+        }
+
         setBusyId(id);
+        setErr(null);
         try {
-            await adminService.users.update(id, { status });
+            await adminService.users.update(id, { status, reason });
             await load();
+        } catch (e) {
+            setErr(e);
         } finally {
             setBusyId("");
         }
@@ -55,9 +77,12 @@ export default function AdminUsers() {
 
     const remove = async (id) => {
         setBusyId(id);
+        setErr(null);
         try {
             await adminService.users.remove(id);
             await load();
+        } catch (e) {
+            setErr(e);
         } finally {
             setBusyId("");
         }
@@ -139,9 +164,28 @@ export default function AdminUsers() {
                                     <td><span className="badge">{status}</span></td>
                                     <td>{role === "freelancer" ? getWithdrawCount(u) : "-"}</td>
                                     <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                        <button className="btn btnOk" disabled={busyId === id} onClick={() => setStatus(id, "active")}>Verify/Activate</button>
-                                        <button className="btn btnDanger" disabled={busyId === id} onClick={() => setStatus(id, "blocked")}>Block</button>
-                                        <ConfirmButton confirmText="Remove this account?" onConfirm={() => remove(id)}>Delete</ConfirmButton>
+                                        <button
+                                            className="btn btnOk"
+                                            disabled={busyId === id || status === "active"}
+                                            onClick={() => setStatus(u, "active", "activate")}
+                                        >
+                                            Verify/Activate
+                                        </button>
+                                        <button
+                                            className="btn btnDanger"
+                                            disabled={busyId === id || status === "blocked"}
+                                            onClick={() => setStatus(u, "blocked", "block")}
+                                        >
+                                            Block
+                                        </button>
+                                        <button
+                                            className="btn btnWarn"
+                                            disabled={busyId === id || status === "deactive"}
+                                            onClick={() => setStatus(u, "deactive", "deactivate")}
+                                        >
+                                            Deactivate
+                                        </button>
+                                        <ConfirmButton confirmMessage="Remove this account?" onConfirm={() => remove(id)}>Delete</ConfirmButton>
                                     </td>
                                 </tr>
                             );
