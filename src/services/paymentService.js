@@ -30,4 +30,25 @@ export const paymentService = {
   async list(query = "") {
     return this.getAll(query);
   },
+
+  async dispute({ paymentId = "", contractId = "", reason = "" } = {}) {
+    const { data } = await apiClient.patch(endpoints.PAYMENTS, {
+      action: "dispute",
+      ...(paymentId ? { paymentId } : {}),
+      ...(contractId ? { contractId } : {}),
+      reason,
+    });
+    return data;
+  },
+
+  async resolve({ paymentId = "", contractId = "", resolution = "", note = "" } = {}) {
+    const { data } = await apiClient.patch(endpoints.PAYMENTS, {
+      action: "resolve",
+      ...(paymentId ? { paymentId } : {}),
+      ...(contractId ? { contractId } : {}),
+      resolution,
+      note,
+    });
+    return data;
+  },
 };

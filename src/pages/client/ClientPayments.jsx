@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ErrorBox from "../../components/ErrorBox";
 import Loading from "../../components/Loading";
@@ -18,6 +18,12 @@ function normalizeId(value) {
 function normalizeStatus(value, fallback = "unknown") {
   const raw = String(value || fallback).trim().toLowerCase();
   return raw || fallback;
+}
+
+function formatStatusLabel(value) {
+  return String(value || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatMoney(value) {
@@ -55,11 +61,47 @@ function getPaymentDate(payment) {
   return payment?.createdAt || payment?.paymentDate || payment?.updatedAt || null;
 }
 
+function getDisputeStatus(payment) {
+  return normalizeStatus(payment?.dispute?.status, "none");
+}
+
+function hasOpenDispute(payment) {
+  const disputeStatus = getDisputeStatus(payment);
+  if (disputeStatus === "open") return true;
+  return getPaymentStatus(payment) === "disputed";
+}
+
+function canClientDispute(payment) {
+  const status = getPaymentStatus(payment);
+  if (!["hold", "pending", "disputed"].includes(status)) return false;
+  if (status === "disputed" && hasOpenDispute(payment)) return false;
+  return !hasOpenDispute(payment);
+}
+
+function renderDisputeMeta(payment) {
+  const reason = String(payment?.dispute?.reason || "").trim();
+  const resolution = String(payment?.dispute?.resolution || "").trim();
+  const resolutionNote = String(payment?.dispute?.resolutionNote || "").trim();
+
+  if (!reason && !resolution && !resolutionNote) return "";
+
+  const pieces = [];
+  if (reason) pieces.push(`Dispute: ${reason}`);
+  if (resolution) {
+    const resolutionText = resolutionNote
+      ? `Resolved: ${resolution}${resolutionNote ? ` (${resolutionNote})` : ""}`
+      : `Resolved: ${resolution}`;
+    pieces.push(resolutionText);
+  }
+
+  return pieces.join(" | ");
+}
+
 const DEFAULT_FORM = {
   contractId: "",
   freelancerId: "",
   amount: "",
-  status: "paid",
+  status: "pending",
   note: "",
 };
 
@@ -70,6 +112,7 @@ export default function ClientPayments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [busyDisputeId, setBusyDisputeId] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [form, setForm] = useState(DEFAULT_FORM);
@@ -113,7 +156,7 @@ export default function ClientPayments() {
   );
 
   const stats = useMemo(() => {
-    const out = { paid: 0, pending: 0, failed: 0 };
+    const out = { hold: 0, pending: 0, paid: 0, failed: 0, disputed: 0, refunded: 0 };
     payments.forEach((payment) => {
       const status = getPaymentStatus(payment);
       if (out[status] !== undefined) out[status] += 1;
@@ -136,6 +179,8 @@ export default function ClientPayments() {
         payment.freelancerId,
         payment.freelancerName,
         payment.note,
+        payment.dispute?.reason,
+        payment.dispute?.resolutionNote,
       ]
         .map((v) => String(v || "").toLowerCase())
         .join(" ");
@@ -153,7 +198,7 @@ export default function ClientPayments() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const onContractChange = (value) => {
+  const onContractChange = useCallback((value) => {
     const contract = contractById.get(normalizeId(value));
 
     setForm((prev) => ({
@@ -165,7 +210,7 @@ export default function ClientPayments() {
           ? String(contract.amount)
           : "",
     }));
-  };
+  }, [contractById]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -176,7 +221,7 @@ export default function ClientPayments() {
     if (!contract) return;
 
     onContractChange(requestedContractId);
-  }, [contractById, location.search]);
+  }, [contractById, location.search, onContractChange]);
 
   const createPayment = async (e) => {
     e.preventDefault();
@@ -211,13 +256,32 @@ export default function ClientPayments() {
     }
   };
 
+  const openDispute = async (payment) => {
+    const paymentId = normalizeId(payment?._id || payment?.paymentId);
+    if (!paymentId || !canClientDispute(payment)) return;
+
+    const reason = window.prompt("Dispute reason (min 10 characters):", "") || "";
+    if (!reason.trim()) return;
+
+    setBusyDisputeId(paymentId);
+    setError("");
+    try {
+      await paymentService.dispute({ paymentId, reason: reason.trim() });
+      await load();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusyDisputeId("");
+    }
+  };
+
   if (loading) return <Loading />;
 
   return (
     <div className="row">
       <div className="card">
         <div className="h1">Client Payments</div>
-        <div className="muted">Record payments for active contracts and track status over time.</div>
+        <div className="muted">Track held payments, open disputes, and final release/refund outcomes.</div>
       </div>
 
       <ErrorBox message={error} />
@@ -285,6 +349,7 @@ export default function ClientPayments() {
               >
                 <option value="paid">Paid</option>
                 <option value="pending">Pending</option>
+                <option value="hold">Hold</option>
                 <option value="failed">Failed</option>
               </select>
             </div>
@@ -324,7 +389,7 @@ export default function ClientPayments() {
       <div className="card">
         <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
           <div className="muted">
-            Total: {payments.length} • Paid: {stats.paid} • Pending: {stats.pending} • Failed: {stats.failed}
+            Total: {payments.length} • Hold: {stats.hold} • Pending: {stats.pending} • Disputed: {stats.disputed} • Paid: {stats.paid} • Refunded: {stats.refunded}
           </div>
           <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
             <input
@@ -336,9 +401,12 @@ export default function ClientPayments() {
             />
             <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="all">All status</option>
+              <option value="hold">Hold</option>
               <option value="paid">Paid</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
+              <option value="disputed">Disputed</option>
+              <option value="refunded">Refunded</option>
             </select>
           </div>
         </div>
@@ -352,6 +420,7 @@ export default function ClientPayments() {
               <th>Status</th>
               <th>Note</th>
               <th>Date</th>
+              <th style={{ width: 160 }}>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -359,6 +428,9 @@ export default function ClientPayments() {
               const id = normalizeId(payment?._id || payment?.paymentId) || `${normalizeId(payment?.contractId)}-${idx}`;
               const linkedContract = contractById.get(normalizeId(payment?.contractId)) || null;
               const status = getPaymentStatus(payment);
+              const disputeMeta = renderDisputeMeta(payment);
+              const disputeAllowed = canClientDispute(payment);
+              const busyDispute = busyDisputeId === id;
 
               return (
                 <tr key={id}>
@@ -366,19 +438,29 @@ export default function ClientPayments() {
                   <td>{payment.freelancerName || payment.freelancerId || linkedContract?.freelancerId || "-"}</td>
                   <td>{formatMoney(payment.amount)}</td>
                   <td>
-                    <span className="badge">{status}</span>
+                    <span className="badge">{formatStatusLabel(status)}</span>
                   </td>
                   <td style={{ maxWidth: 320, whiteSpace: "pre-wrap" }}>
-                    {payment.note || payment.paymentMethod || "-"}
+                    {[payment.note || payment.paymentMethod || "-", disputeMeta].filter(Boolean).join("\n")}
                   </td>
                   <td className="muted">{formatDateTime(getPaymentDate(payment))}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btnDanger"
+                      disabled={!disputeAllowed || busyDispute}
+                      onClick={() => openDispute(payment)}
+                    >
+                      {busyDispute ? "Opening..." : hasOpenDispute(payment) ? "Disputed" : "Dispute"}
+                    </button>
+                  </td>
                 </tr>
               );
             })}
 
             {filteredPayments.length === 0 && (
               <tr>
-                <td colSpan="6" className="muted">
+                <td colSpan="7" className="muted">
                   No payments match the current filter.
                 </td>
               </tr>

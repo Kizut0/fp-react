@@ -8,6 +8,33 @@ function normalizeStatus(value, fallback = "unknown") {
     return raw || fallback;
 }
 
+function formatStatusLabel(value) {
+    return String(value || "")
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function renderDisputeInfo(payment) {
+    const disputeStatus = normalizeStatus(payment?.dispute?.status, "none");
+    if (disputeStatus === "none") return "";
+
+    const reason = String(payment?.dispute?.reason || "").trim();
+    const resolution = String(payment?.dispute?.resolution || "").trim();
+    const resolutionNote = String(payment?.dispute?.resolutionNote || "").trim();
+
+    if (disputeStatus === "open") {
+        return reason ? `Dispute open: ${reason}` : "Dispute open";
+    }
+
+    if (resolution) {
+        return resolutionNote
+            ? `Dispute resolved: ${resolution} (${resolutionNote})`
+            : `Dispute resolved: ${resolution}`;
+    }
+
+    return "Dispute resolved";
+}
+
 function formatDateTime(value) {
     if (!value) return "-";
     const date = new Date(value);
@@ -45,7 +72,7 @@ export default function FreelancerPayments() {
     }, []);
 
     const totals = useMemo(() => {
-        const out = { paid: 0, pending: 0, failed: 0, amount: 0 };
+        const out = { hold: 0, pending: 0, paid: 0, failed: 0, disputed: 0, refunded: 0, amount: 0 };
         items.forEach((item) => {
             const status = normalizeStatus(item.status || item.paymentStatus);
             if (out[status] !== undefined) out[status] += 1;
@@ -88,7 +115,7 @@ export default function FreelancerPayments() {
             <div className="card">
                 <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
                     <div className="muted">
-                        Total: {items.length} • Paid: {totals.paid} • Pending: {totals.pending} • Failed: {totals.failed} • Paid amount: {formatMoney(totals.amount)}
+                        Total: {items.length} • Hold: {totals.hold} • Pending: {totals.pending} • Disputed: {totals.disputed} • Paid: {totals.paid} • Refunded: {totals.refunded} • Paid amount: {formatMoney(totals.amount)}
                     </div>
                     <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
                         <input
@@ -100,9 +127,12 @@ export default function FreelancerPayments() {
                         />
                         <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                             <option value="all">All status</option>
+                            <option value="hold">Hold</option>
                             <option value="paid">Paid</option>
                             <option value="pending">Pending</option>
                             <option value="failed">Failed</option>
+                            <option value="disputed">Disputed</option>
+                            <option value="refunded">Refunded</option>
                         </select>
                     </div>
                 </div>
@@ -113,8 +143,8 @@ export default function FreelancerPayments() {
                             <tr key={p._id || p.paymentId}>
                                 <td>{p.contractId}</td>
                                 <td>{p.amount}</td>
-                                <td><span className="badge">{normalizeStatus(p.status || p.paymentStatus)}</span></td>
-                                <td style={{ whiteSpace: "pre-wrap" }}>{p.note || p.paymentMethod || "-"}</td>
+                                <td><span className="badge">{formatStatusLabel(normalizeStatus(p.status || p.paymentStatus))}</span></td>
+                                <td style={{ whiteSpace: "pre-wrap" }}>{[p.note || p.paymentMethod || "-", renderDisputeInfo(p)].filter(Boolean).join("\n")}</td>
                                 <td className="muted">{formatDateTime(p.createdAt || p.paymentDate || p.updatedAt)}</td>
                             </tr>
                         ))}

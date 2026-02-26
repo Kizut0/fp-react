@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ErrorBox from "../../components/ErrorBox";
 import Loading from "../../components/Loading";
 import { contractService } from "../../services/contractService";
+import { paymentService } from "../../services/paymentService";
 
 function toArray(data) {
   if (Array.isArray(data)) return data;
@@ -63,6 +64,24 @@ export default function ClientJobComplete() {
         await contractService.rejectCompletion(id, feedback);
       }
       await load();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const dispute = async (id) => {
+    if (!id) return;
+
+    const reason = window.prompt("Dispute reason (min 10 characters):", "") || "";
+    if (!reason.trim()) return;
+
+    setBusyId(id);
+    setError("");
+    try {
+      await paymentService.dispute({ contractId: String(id), reason: reason.trim() });
+      navigate(`/client/payments?contractId=${encodeURIComponent(String(id || ""))}`);
     } catch (err) {
       setError(err);
     } finally {
@@ -146,6 +165,14 @@ export default function ClientJobComplete() {
                         onClick={() => decide(id, "reject")}
                       >
                         Reject
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btnWarn"
+                        disabled={!pending || busyId === id}
+                        onClick={() => dispute(id)}
+                      >
+                        Dispute
                       </button>
                     </div>
                   </td>
