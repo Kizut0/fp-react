@@ -6,23 +6,22 @@ export default function NavBar() {
   const dashboardPath = user
     ? `/${String(user.role || "").toLowerCase()}/dashboard`
     : "/";
+  const userName = String(user?.name || "Account").trim();
+  const initial = userName ? userName[0].toUpperCase() : "A";
 
   return (
     <nav className="appNav">
-      <Link
-        to={dashboardPath}
-        className="appNavBrand"
-        style={{
-          position: "absolute",
-          left: "50%",
-          transform: "translateX(-50%)",
-        }}
-      >
+      <Link to={dashboardPath} className="appNavBrand">
         Freelance Hub
       </Link>
 
-      <div className="appNavActions" style={{ zIndex: 1 }}>
-        {user && <span className="appNavUser">{user.name || "Account"}</span>}
+      <div className="appNavActions">
+        {user && (
+          <span className="appNavUser">
+            <span className="appNavInitial" aria-hidden="true">{initial}</span>
+            <span>{userName}</span>
+          </span>
+        )}
         {user && (
           <button
             onClick={logout}

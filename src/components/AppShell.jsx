@@ -18,7 +18,7 @@ export default function AppShell({ children }) {
       <NavBar />
       <div className="flex flex-1 appShellBody">
         {showSidebar && <SideBar />}
-        <main className="flex-1 p-6 appMain">
+        <main className="flex-1 appMain">
           {children ?? <Outlet />}
         </main>
       </div>

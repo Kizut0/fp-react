@@ -3,11 +3,25 @@
 }
 
 :root {
-  font-family: "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-soft: #f9fbff;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --line: #dbe3ef;
+  --line-strong: #c9d5e7;
+  --brand: #2f67d8;
+  --brand-dark: #1d4fb5;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 10px;
+  --shadow-soft: 0 1px 2px rgba(8, 15, 31, 0.06), 0 10px 24px rgba(8, 15, 31, 0.05);
+  --shadow-hover: 0 4px 10px rgba(8, 15, 31, 0.1), 0 18px 40px rgba(8, 15, 31, 0.08);
+  font-family: "Avenir Next", "Nunito Sans", "Segoe UI", Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #111827;
-  background-color: #f3f4f6;
+  color: var(--text);
+  background-color: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -18,8 +32,11 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #f3f4f6;
-  color: #111827;
+  background:
+    radial-gradient(1100px 520px at 85% -20%, rgba(47, 103, 216, 0.12), transparent 62%),
+    radial-gradient(900px 420px at -8% -25%, rgba(14, 165, 233, 0.08), transparent 62%),
+    var(--bg);
+  color: var(--text);
 }
 
 #root {
@@ -47,31 +64,41 @@ select {
 .row {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-hover);
 }
 
 .h1 {
-  font-size: 1.5rem;
+  font-size: 1.85rem;
   font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0b1430;
   margin: 0;
 }
 
 .h2 {
-  font-size: 1.125rem;
+  font-size: 1.2rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #14213d;
   margin: 0 0 8px;
 }
 
 .muted {
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .grid2,
@@ -100,25 +127,51 @@ select {
 
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface);
 }
 
 .table th,
 .table td {
   text-align: left;
-  padding: 10px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 10px;
+  border-bottom: 1px solid #e6edf7;
   vertical-align: top;
+}
+
+.table th {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #52627a;
+  background: #f7faff;
+}
+
+.table tbody tr:nth-child(even) {
+  background: #fcfdff;
+}
+
+.table tbody tr:hover {
+  background: #f1f6ff;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .badge {
   display: inline-block;
-  border: 1px solid #d1d5db;
+  border: 1px solid #cfdced;
   border-radius: 999px;
-  padding: 2px 10px;
+  padding: 3px 10px;
   font-size: 0.75rem;
-  color: #374151;
-  background: #f9fafb;
+  color: #41536f;
+  background: #f4f8ff;
+  font-weight: 600;
 }
 
 .btn {
@@ -126,22 +179,22 @@ select {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  min-height: 40px;
-  padding: 9px 14px;
+  border: 1px solid #cad7ea;
+  border-radius: var(--radius-sm);
+  min-height: 42px;
+  padding: 9px 16px;
   cursor: pointer;
-  background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
-  color: #0f172a;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+  color: #112242;
   font-weight: 600;
   letter-spacing: 0.01em;
-  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.06), 0 4px 10px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.06), 0 5px 12px rgba(15, 23, 42, 0.05);
   transition: transform 120ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease;
 }
 
 .btn:hover {
-  background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
-  box-shadow: 0 2px 3px rgba(15, 23, 42, 0.08), 0 8px 18px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #ffffff 0%, #ecf3ff 100%);
+  box-shadow: 0 2px 3px rgba(15, 23, 42, 0.08), 0 10px 20px rgba(15, 23, 42, 0.1);
   transform: translateY(-1px);
   text-decoration: none;
 }
@@ -152,7 +205,7 @@ select {
 }
 
 .btn:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.2);
+  outline: 3px solid rgba(47, 103, 216, 0.25);
   outline-offset: 1px;
 }
 
@@ -164,14 +217,14 @@ select {
 }
 
 .btnOk {
-  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-  border-color: #1d4ed8;
+  background: linear-gradient(180deg, #3f83f8 0%, var(--brand) 100%);
+  border-color: #2459c6;
   color: #ffffff;
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25), 0 10px 18px rgba(37, 99, 235, 0.22);
+  box-shadow: 0 2px 4px rgba(47, 103, 216, 0.28), 0 10px 18px rgba(47, 103, 216, 0.22);
 }
 
 .btnOk:hover {
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
 }
 
 .btnDanger {
@@ -187,8 +240,8 @@ select {
 
 .btnGhost {
   background: #ffffff;
-  border-color: #cbd5e1;
-  color: #0f172a;
+  border-color: #ccdaee;
+  color: #122548;
 }
 
 .btnGhost:hover {
@@ -219,11 +272,26 @@ select {
 .input,
 .textarea {
   width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 8px 10px;
+  border: 1px solid #cfdced;
+  border-radius: 10px;
+  padding: 10px 12px;
   background: #ffffff;
-  color: #111827;
+  color: #0f172a;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: #96a4bc;
+}
+
+.input:focus,
+.textarea:focus,
+select.input:focus {
+  outline: none;
+  border-color: #5b8ce5;
+  box-shadow: 0 0 0 3px rgba(47, 103, 216, 0.18);
+  background: #fff;
 }
 
 .textarea {
@@ -251,11 +319,12 @@ select {
 }
 
 .statCard {
-  min-height: 120px;
+  min-height: 132px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
+  padding: 16px 18px;
+  background: linear-gradient(145deg, #ffffff 0%, #f6f9ff 100%);
 }
 
 .statCardBody {
@@ -266,17 +335,17 @@ select {
 
 .statCardLabel {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 600;
-  color: #6b7280;
+  color: #5f6f89;
 }
 
 .statCardValue {
   margin: 0;
-  font-size: 2.2rem;
+  font-size: 2rem;
   line-height: 1.1;
   font-weight: 700;
-  color: #111827;
+  color: #101d3a;
 }
 
 .statCardTrend {
@@ -285,8 +354,14 @@ select {
 }
 
 .statCardIcon {
-  font-size: 1.75rem;
-  color: #9ca3af;
+  font-size: 1.65rem;
+  color: #5f7eb4;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #e9f0fd;
 }
 
 .centeredActions {
@@ -295,23 +370,126 @@ select {
 }
 
 .navLink {
-  padding: 8px 10px;
-  border-radius: 8px;
-  color: #374151;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #2e3f5f;
   border: 1px solid transparent;
+  font-weight: 600;
+  transition: all 140ms ease;
 }
 
 .navLink:hover {
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  background: #edf3ff;
+  border-color: #c5d8fb;
   text-decoration: none;
 }
 
 .navLinkActive {
-  background: #eff6ff;
-  border-color: #93c5fd;
-  color: #1d4ed8;
+  background: #e7f0ff;
+  border-color: #94b8f3;
+  color: #1f56c0;
   font-weight: 600;
+  box-shadow: inset 3px 0 0 #2f67d8;
+}
+
+.appShell {
+  background: transparent;
+}
+
+.appShellBody {
+  gap: 0;
+}
+
+.appNav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: linear-gradient(90deg, #2e64d6 0%, #2563eb 52%, #2258cb 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 22px rgba(25, 66, 154, 0.28);
+}
+
+.appNavBrand {
+  color: #ffffff;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+}
+
+.appNavBrand:hover {
+  text-decoration: none;
+  color: #f8fbff;
+}
+
+.appNavActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.appNavUser {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #ecf4ff;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.appNavInitial {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1f4ba6;
+  background: #ffffff;
+}
+
+.appSidebar {
+  width: 264px;
+  border-right: 1px solid var(--line);
+  background: linear-gradient(180deg, #f7faff 0%, #f2f6fd 100%);
+  padding: 14px 14px 20px;
+}
+
+.appSidebarMeta {
+  padding: 8px 8px 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed #cfdbed;
+}
+
+.appSidebarRole {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #234a98;
+}
+
+.appSidebarHint {
+  font-size: 0.78rem;
+  color: #6d7f9b;
+}
+
+.appSidebarNav {
+  gap: 8px;
+}
+
+.appMain {
+  padding: 22px;
+}
+
+.appMain .row {
+  max-width: 1320px;
 }
 
 /* Utility classes already used in JSX */
@@ -549,6 +727,18 @@ select {
   color: #b91c1c;
 }
 
+.text-green-600 {
+  color: #16a34a;
+}
+
+.text-red-500 {
+  color: #ef4444;
+}
+
+.border-red-500 {
+  border-color: #ef4444;
+}
+
 .border {
   border: 1px solid #d1d5db;
 }
@@ -623,5 +813,61 @@ select {
 
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1000px) {
+  .appNav {
+    min-height: 60px;
+    padding: 8px 12px;
+  }
+
+  .appNavBrand {
+    font-size: 1.4rem;
+  }
+
+  .appShellBody {
+    flex-direction: column;
+  }
+
+  .appSidebar {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 10px 12px 12px;
+  }
+
+  .appSidebarMeta {
+    margin-bottom: 6px;
+  }
+
+  .appSidebarNav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .appMain {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .h1 {
+    font-size: 1.45rem;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .table th,
+  .table td {
+    padding: 10px 8px;
+  }
+
+  .appSidebarNav {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 }
