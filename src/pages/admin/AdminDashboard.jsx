@@ -138,7 +138,7 @@ export default function AdminDashboard() {
         const date = getDateFromItem(job);
         return date && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
     });
-    const pieColors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+    const pieColors = ["#8b5e34", "#b27a4b", "#6f4828", "#c18b5a", "#9b6a3f", "#d4a172"];
     const categoryMap = currentMonthJobs.reduce((acc, job) => {
         const key = String(job.category || "Other").trim() || "Other";
         acc[key] = (acc[key] || 0) + 1;
@@ -189,15 +189,15 @@ export default function AdminDashboard() {
                     <div className="h2">Monthly Freelance Jobs Done</div>
                     <div className="muted">Completed contracts over the last 6 months.</div>
                     <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ width: "100%", height: 210, marginTop: 10 }}>
-                        <line x1={xPad} y1={yBottom} x2={chartWidth - xPad} y2={yBottom} stroke="#e5e7eb" />
-                        <path d={linePath} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />
+                        <line x1={xPad} y1={yBottom} x2={chartWidth - xPad} y2={yBottom} stroke="#d9c7b5" />
+                        <path d={linePath} fill="none" stroke="#8b5e34" strokeWidth="3" strokeLinecap="round" />
                         {linePoints.map((point) => (
                             <g key={point.key}>
-                                <circle cx={point.x} cy={point.y} r="4" fill="#1d4ed8" />
-                                <text x={point.x} y={yBottom + 22} textAnchor="middle" fontSize="11" fill="#6b7280">
+                                <circle cx={point.x} cy={point.y} r="4" fill="#6f4828" />
+                                <text x={point.x} y={yBottom + 22} textAnchor="middle" fontSize="11" fill="#7d6753">
                                     {point.label}
                                 </text>
-                                <text x={point.x} y={point.y - 8} textAnchor="middle" fontSize="11" fill="#111827">
+                                <text x={point.x} y={point.y - 8} textAnchor="middle" fontSize="11" fill="#3a2618">
                                     {point.value}
                                 </text>
                             </g>
@@ -220,9 +220,9 @@ export default function AdminDashboard() {
                                         <path key={item.label} d={describeArc(110, 110, 88, item.start, item.end)} fill={item.color} />
                                     ))
                                 )}
-                                <circle cx="110" cy="110" r="45" fill="#fff" />
-                                <text x="110" y="106" textAnchor="middle" fontSize="12" fill="#6b7280">Total</text>
-                                <text x="110" y="126" textAnchor="middle" fontSize="15" fontWeight="700" fill="#111827">{categoryTotal}</text>
+                                <circle cx="110" cy="110" r="45" fill="#fffaf4" />
+                                <text x="110" y="106" textAnchor="middle" fontSize="12" fill="#7d6753">Total</text>
+                                <text x="110" y="126" textAnchor="middle" fontSize="15" fontWeight="700" fill="#3a2618">{categoryTotal}</text>
                             </svg>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                                 {categoryPoints.map((item) => (
