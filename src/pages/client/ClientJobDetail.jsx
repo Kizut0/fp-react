@@ -36,6 +36,19 @@ function normalizeStatus(value) {
   return String(value || "submitted").toLowerCase();
 }
 
+function normalizeJobStatus(value, fallback = "open") {
+  const raw = String(value || fallback).trim().toLowerCase();
+  if (raw === "closed") return "cancelled";
+  if (["draft", "open", "in_progress", "completed", "cancelled"].includes(raw)) return raw;
+  return fallback;
+}
+
+function formatStatusLabel(value) {
+  return String(value || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export default function ClientJobDetail() {
   const { jobId } = useParams();
 
@@ -78,6 +91,13 @@ export default function ClientJobDetail() {
     }
     return out;
   }, [proposals]);
+
+  const normalizedJobStatus = normalizeJobStatus(job?.status, "open");
+  const isJobLocked =
+    normalizedJobStatus !== "open" ||
+    Boolean(job?.isLocked) ||
+    Boolean(String(job?.acceptedProposalId || "").trim()) ||
+    proposalStats.accepted > 0;
 
   const handleAccept = async (id) => {
     setBusyId(id);
@@ -125,14 +145,20 @@ export default function ClientJobDetail() {
           <div>
             <div className="h1">{job.title}</div>
             <div className="muted">
-              Posted {formatDate(job.createdAt || job.postedAt)} • Status: {job.status || "open"}
+              Posted {formatDate(job.createdAt || job.postedAt)} • Status: {formatStatusLabel(normalizedJobStatus)}
             </div>
           </div>
 
           <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
-            <Link to={`/client/jobs/${jobId}/edit`} className="btn">
-              Edit Job
-            </Link>
+            {isJobLocked ? (
+              <button type="button" className="btn" disabled title="Only open jobs with no accepted proposal can be edited.">
+                Locked
+              </button>
+            ) : (
+              <Link to={`/client/jobs/${jobId}/edit`} className="btn">
+                Edit Job
+              </Link>
+            )}
             <Link to="/client/jobs" className="btn">
               Back
             </Link>
@@ -198,7 +224,7 @@ export default function ClientJobDetail() {
             {proposals.map((proposal) => {
               const id = proposal._id || proposal.proposalId;
               const status = normalizeStatus(proposal.status);
-              const actionable = status === "submitted";
+              const actionable = status === "submitted" && !isJobLocked;
 
               return (
                 <tr key={id}>

@@ -56,7 +56,26 @@ function normalizeEmail(value) {
 
 function normalizeStatus(value, fallback = "open") {
   const raw = String(value || fallback).trim().toLowerCase();
-  return raw === "closed" ? "closed" : "open";
+  if (raw === "closed") return "cancelled";
+  if (["draft", "open", "in_progress", "completed", "cancelled"].includes(raw)) return raw;
+  return fallback;
+}
+
+function formatStatusLabel(status) {
+  return String(status || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function isJobLocked(job) {
+  const status = normalizeStatus(job?.status, "open");
+  if (status !== "open") return true;
+  if (job?.isLocked) return true;
+  return normalizeString(job?.acceptedProposalId) !== "";
+}
+
+function canClientManageJob(job) {
+  return normalizeStatus(job?.status, "open") === "open" && !isJobLocked(job);
 }
 
 function isOwnedByUser(job, owner) {
@@ -93,8 +112,16 @@ export default function ClientJobs() {
     [user]
   );
 
-  const openCount = useMemo(
-    () => items.filter((job) => normalizeStatus(job.status) === "open").length,
+  const statusCounts = useMemo(
+    () =>
+      items.reduce(
+        (acc, job) => {
+          const status = normalizeStatus(job?.status, "open");
+          if (acc[status] !== undefined) acc[status] += 1;
+          return acc;
+        },
+        { draft: 0, open: 0, in_progress: 0, completed: 0, cancelled: 0 }
+      ),
     [items]
   );
 
@@ -127,23 +154,6 @@ export default function ClientJobs() {
   useEffect(() => {
     load();
   }, [load]);
-
-  const toggleJobStatus = async (job) => {
-    const id = job._id || job.jobId;
-    if (!id) return;
-
-    const nextStatus = normalizeStatus(job.status) === "open" ? "closed" : "open";
-    setBusyId(id);
-    setError("");
-    try {
-      await jobService.update(id, { status: nextStatus });
-      await load();
-    } catch (err) {
-      setError(err);
-    } finally {
-      setBusyId("");
-    }
-  };
 
   const removeJob = async (job) => {
     const id = job._id || job.jobId;
@@ -179,7 +189,9 @@ export default function ClientJobs() {
         <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap" }}>
           <div>
             <div className="h2">Job Posts</div>
-            <div className="muted">Total: {items.length} • Open: {openCount}</div>
+            <div className="muted">
+              Total: {items.length} • Open: {statusCounts.open} • In Progress: {statusCounts.in_progress}
+            </div>
           </div>
 
           <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
@@ -192,8 +204,11 @@ export default function ClientJobs() {
             />
             <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="all">All status</option>
+              <option value="draft">Draft</option>
               <option value="open">Open</option>
-              <option value="closed">Closed</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
             </select>
             <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="newest">Newest</option>
@@ -222,48 +237,57 @@ export default function ClientJobs() {
                 <th>Posted</th>
                 <th>Proposals</th>
                 <th>Status</th>
-                <th style={{ width: 260 }}>Actions</th>
+                <th style={{ width: 220 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((job) => (
-                <tr key={job._id || job.jobId}>
-                  <td>{job.title}</td>
-                  <td>{job.category || "General"}</td>
-                  <td>{renderBudget(job)}</td>
-                  <td>{formatDate(extractJobDate(job))}</td>
-                  <td>{Number(job.proposalsCount || 0)}</td>
-                  <td>
-                    <span className="badge">{job.status || "open"}</span>
-                  </td>
-                  <td>
-                    <div className="jobActions">
-                      <Link to={`/client/jobs/${job._id || job.jobId}`} className="btn btnGhost">
-                        View
-                      </Link>
-                      <Link to={`/client/jobs/${job._id || job.jobId}/edit`} className="btn btnInfo">
-                        Edit
-                      </Link>
-                      <button
-                        type="button"
-                        className={`btn ${normalizeStatus(job.status) === "open" ? "btnWarn" : "btnOk"}`}
-                        disabled={busyId === (job._id || job.jobId)}
-                        onClick={() => toggleJobStatus(job)}
-                      >
-                        {normalizeStatus(job.status) === "open" ? "Close Job" : "Reopen"}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btnDanger"
-                        disabled={busyId === (job._id || job.jobId)}
-                        onClick={() => removeJob(job)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {items.map((job) => {
+                const id = job._id || job.jobId;
+                const status = normalizeStatus(job.status, "open");
+                const canManage = canClientManageJob(job);
+                const busy = busyId === id;
+                const lockHint = canManage
+                  ? ""
+                  : "Only open jobs with no accepted proposal can be edited or deleted.";
+
+                return (
+                  <tr key={id}>
+                    <td>{job.title}</td>
+                    <td>{job.category || "General"}</td>
+                    <td>{renderBudget(job)}</td>
+                    <td>{formatDate(extractJobDate(job))}</td>
+                    <td>{Number(job.proposalsCount || 0)}</td>
+                    <td>
+                      <span className="badge">{formatStatusLabel(status)}</span>
+                    </td>
+                    <td>
+                      <div className="jobActions">
+                        <Link to={`/client/jobs/${id}`} className="btn btnGhost">
+                          View
+                        </Link>
+                        {canManage ? (
+                          <Link to={`/client/jobs/${id}/edit`} className="btn btnInfo">
+                            Edit
+                          </Link>
+                        ) : (
+                          <button type="button" className="btn btnInfo" disabled title={lockHint}>
+                            Locked
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btnDanger"
+                          disabled={busy || !canManage}
+                          title={lockHint}
+                          onClick={() => removeJob(job)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

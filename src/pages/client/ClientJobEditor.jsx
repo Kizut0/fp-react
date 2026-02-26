@@ -26,12 +26,14 @@ const DURATION_OPTIONS = [
   "More than 6 months",
 ];
 const LOCATION_OPTIONS = ["Remote", "Hybrid", "On-site"];
+const CREATE_STATUS_OPTIONS = ["draft", "open"];
+const EDIT_STATUS_OPTIONS = ["open", "cancelled"];
 
 const DEFAULT_FORM = {
   title: "",
   description: "",
   budget: "",
-  status: "open",
+  status: "draft",
   category: "Web Development",
   skills: "",
   experienceLevel: "Intermediate",
@@ -39,6 +41,19 @@ const DEFAULT_FORM = {
   duration: "1 to 3 months",
   locationType: "Remote",
 };
+
+function normalizeJobStatus(value, fallback = "open") {
+  const raw = String(value || fallback).trim().toLowerCase();
+  if (raw === "closed") return "cancelled";
+  if (["draft", "open", "in_progress", "completed", "cancelled"].includes(raw)) return raw;
+  return fallback;
+}
+
+function formatStatusLabel(value) {
+  return String(value || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 function parseSkillsInput(value) {
   return String(value || "")
@@ -95,7 +110,7 @@ export default function ClientJobEditor({ mode = "create" }) {
           title: data?.title || "",
           description: data?.description || "",
           budget: String(data?.budget || ""),
-          status: data?.status || "open",
+          status: normalizeJobStatus(data?.status, "open"),
           category: data?.category || "Web Development",
           skills: skillsToText(data?.skills),
           experienceLevel: data?.experienceLevel || "Intermediate",
@@ -118,11 +133,15 @@ export default function ClientJobEditor({ mode = "create" }) {
     const descLen = form.description.trim().length;
     const budgetNum = Number(form.budget);
     const skills = parseSkillsInput(form.skills);
+    const status = normalizeJobStatus(form.status, isCreate ? "draft" : "open");
 
     const titleOk = titleLen >= 6;
     const descOk = descLen >= 30;
     const budgetOk = Number.isFinite(budgetNum) && budgetNum > 0;
     const skillsOk = skills.length >= 1;
+    const statusOk = isCreate
+      ? CREATE_STATUS_OPTIONS.includes(status)
+      : EDIT_STATUS_OPTIONS.includes(status);
 
     return {
       titleLen,
@@ -130,13 +149,15 @@ export default function ClientJobEditor({ mode = "create" }) {
       budgetNum,
       skills,
       skillsCount: skills.length,
+      status,
       titleOk,
       descOk,
       budgetOk,
       skillsOk,
-      canSubmit: titleOk && descOk && budgetOk && skillsOk && !saving,
+      statusOk,
+      canSubmit: titleOk && descOk && budgetOk && skillsOk && statusOk && !saving,
     };
-  }, [form, saving]);
+  }, [form, isCreate, saving]);
 
   const handleChange = (e) => {
     setTouched(true);
@@ -161,7 +182,7 @@ export default function ClientJobEditor({ mode = "create" }) {
         title: form.title.trim(),
         description: form.description.trim(),
         budget: Number(form.budget),
-        status: form.status || "open",
+        status: validation.status,
         category: form.category,
         skills: validation.skills,
         experienceLevel: form.experienceLevel,
@@ -257,15 +278,32 @@ export default function ClientJobEditor({ mode = "create" }) {
                 )}
               </div>
 
-              {!isCreate && (
-                <div>
-                  <label className="block mb-1">Status</label>
-                  <select className="input" name="status" value={form.status} onChange={handleChange}>
-                    <option value="open">Open</option>
-                    <option value="closed">Closed</option>
-                  </select>
-                </div>
-              )}
+              <div>
+                <label className="block mb-1">Status</label>
+                <select className="input" name="status" value={form.status} onChange={handleChange}>
+                  {isCreate ? (
+                    CREATE_STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>
+                        {formatStatusLabel(status)}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      {!EDIT_STATUS_OPTIONS.includes(validation.status) && (
+                        <option value={validation.status}>{formatStatusLabel(validation.status)}</option>
+                      )}
+                      {EDIT_STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>
+                          {formatStatusLabel(status)}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                {touched && !validation.statusOk && (
+                  <div className="text-sm text-red-600 mt-1">Invalid status for this action.</div>
+                )}
+              </div>
             </div>
 
             <div className="grid2">

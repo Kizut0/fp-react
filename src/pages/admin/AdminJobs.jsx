@@ -6,7 +6,9 @@ import { jobService } from "../../services/jobService";
 
 function normalizeStatus(value, fallback = "open") {
     const raw = String(value || fallback).trim().toLowerCase();
-    return raw === "closed" ? "closed" : "open";
+    if (raw === "closed") return "cancelled";
+    if (["draft", "open", "in_progress", "completed", "cancelled"].includes(raw)) return raw;
+    return fallback;
 }
 
 export default function AdminJobs() {
@@ -49,9 +51,12 @@ export default function AdminJobs() {
         const id = job._id || job.jobId;
         if (!id) return;
 
+        const currentStatus = normalizeStatus(job.status, "open");
+        if (!["draft", "open", "cancelled"].includes(currentStatus)) return;
+
         setBusyId(id); setErr(null);
         try {
-            const nextStatus = normalizeStatus(job.status) === "open" ? "closed" : "open";
+            const nextStatus = currentStatus === "open" ? "cancelled" : "open";
             await jobService.update(id, { status: nextStatus });
             await load();
         } catch (e) { setErr(e); }
@@ -93,7 +98,10 @@ export default function AdminJobs() {
                         <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                             <option value="all">All status</option>
                             <option value="open">Open</option>
-                            <option value="closed">Closed</option>
+                            <option value="draft">Draft</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
                         </select>
                     </div>
                 </div>
@@ -108,8 +116,15 @@ export default function AdminJobs() {
                                 <td><span className="badge">{normalizeStatus(j.status)}</span></td>
                                 <td>
                                     <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
-                                        <button className="btn" disabled={busyId === (j._id || j.jobId)} onClick={() => toggleStatus(j)}>
-                                            {normalizeStatus(j.status) === "open" ? "Close" : "Reopen"}
+                                        <button
+                                            className="btn"
+                                            disabled={
+                                                busyId === (j._id || j.jobId) ||
+                                                !["draft", "open", "cancelled"].includes(normalizeStatus(j.status))
+                                            }
+                                            onClick={() => toggleStatus(j)}
+                                        >
+                                            {normalizeStatus(j.status) === "open" ? "Cancel" : "Set Open"}
                                         </button>
                                         <button className="btn btnDanger" disabled={busyId === (j._id || j.jobId)} onClick={() => removeJob(j)}>
                                             Delete
