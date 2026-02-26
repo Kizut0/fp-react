@@ -31,21 +31,23 @@ export const paymentService = {
     return this.getAll(query);
   },
 
-  async dispute({ paymentId = "", contractId = "", reason = "" } = {}) {
+  async dispute({ paymentId = "", contractId = "", milestoneKey = "", reason = "" } = {}) {
     const { data } = await apiClient.patch(endpoints.PAYMENTS, {
       action: "dispute",
       ...(paymentId ? { paymentId } : {}),
       ...(contractId ? { contractId } : {}),
+      ...(milestoneKey ? { milestoneKey } : {}),
       reason,
     });
     return data;
   },
 
-  async resolve({ paymentId = "", contractId = "", resolution = "", note = "" } = {}) {
+  async resolve({ paymentId = "", contractId = "", milestoneKey = "", resolution = "", note = "" } = {}) {
     const { data } = await apiClient.patch(endpoints.PAYMENTS, {
       action: "resolve",
       ...(paymentId ? { paymentId } : {}),
       ...(contractId ? { contractId } : {}),
+      ...(milestoneKey ? { milestoneKey } : {}),
       resolution,
       note,
     });

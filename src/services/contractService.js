@@ -59,35 +59,39 @@ export const contractService = {
     return data;
   },
 
-  async acceptCompletion(id, feedback = "") {
+  async acceptCompletion(id, feedback = "", milestoneKey = "") {
     const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/completion`, {
       action: "accept",
       feedback,
+      ...(milestoneKey ? { milestoneKey } : {}),
     });
     return data;
   },
 
-  async rejectCompletion(id, feedback = "") {
+  async rejectCompletion(id, feedback = "", milestoneKey = "") {
     const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/completion`, {
       action: "reject",
       feedback,
+      ...(milestoneKey ? { milestoneKey } : {}),
     });
     return data;
   },
 
-  async openDispute(id, reason) {
+  async openDispute(id, reason, milestoneKey = "") {
     const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/dispute`, {
       action: "open",
       reason,
+      ...(milestoneKey ? { milestoneKey } : {}),
     });
     return data;
   },
 
-  async resolveDispute(id, decision, resolutionNote = "") {
+  async resolveDispute(id, decision, resolutionNote = "", milestoneKey = "") {
     const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/dispute`, {
       action: "resolve",
       decision,
       resolutionNote,
+      ...(milestoneKey ? { milestoneKey } : {}),
     });
     return data;
   },
