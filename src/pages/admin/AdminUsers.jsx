@@ -3,6 +3,7 @@ import Loading from "../../components/Loading";
 import ErrorBox from "../../components/ErrorBox";
 import ConfirmButton from "../../components/ConfirmButton";
 import { adminService } from "../../services/adminService";
+import { getStakeholderMeta } from "../../constants/stakeholders";
 
 function normalize(value) {
     return String(value || "").trim().toLowerCase();
@@ -124,11 +125,17 @@ export default function AdminUsers() {
                             const id = u._id || u.userId;
                             const role = normalize(u.role);
                             const status = normalizeStatus(u.status);
+                            const roleMeta = getStakeholderMeta(u.role);
                             return (
                                 <tr key={id}>
                                     <td>{u.name}</td>
                                     <td className="muted">{u.email}</td>
-                                    <td><span className="badge">{u.role}</span></td>
+                                    <td>
+                                        <span className="badge roleBadge">
+                                            <span className="roleBadgeIcon" aria-hidden="true">{roleMeta.icon}</span>
+                                            <span>{roleMeta.label}</span>
+                                        </span>
+                                    </td>
                                     <td><span className="badge">{status}</span></td>
                                     <td>{role === "freelancer" ? getWithdrawCount(u) : "-"}</td>
                                     <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

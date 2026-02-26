@@ -1,8 +1,10 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { getStakeholderMeta } from "../constants/stakeholders";
 
 export default function SideBar() {
   const { user } = useAuth();
+  const roleMeta = getStakeholderMeta(user?.role);
 
   const linksByRole = {
     Client: [
@@ -46,7 +48,10 @@ export default function SideBar() {
   return (
     <aside className="appSidebar">
       <div className="appSidebarMeta">
-        <div className="appSidebarRole">{user?.role || "Workspace"}</div>
+        <div className="appSidebarRole">
+          <span className="appSidebarRoleIcon" aria-hidden="true">{roleMeta.icon}</span>
+          <span>{roleMeta.label || "Workspace"}</span>
+        </div>
         <div className="appSidebarHint">Navigation</div>
       </div>
       <nav className="flex flex-col gap-3 appSidebarNav">

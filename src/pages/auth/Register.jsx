@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { STAKEHOLDER_LIST } from "../../constants/stakeholders";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -54,6 +55,11 @@ export default function Register() {
         !loading,
     };
   }, [form, loading]);
+
+  const selectedRoleDescription = useMemo(() => {
+    const selected = STAKEHOLDER_LIST.find((item) => item.key === form.role);
+    return selected?.description || STAKEHOLDER_LIST[0].description;
+  }, [form.role]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -203,28 +209,31 @@ export default function Register() {
 
           <div className="mb-6">
             <label className="block mb-1">Role</label>
-            <select
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
-            >
-              <option value="freelancer">
-                Freelancer
-              </option>
-              <option value="client">
-                Client
-              </option>
-              <option value="admin">
-                Admin
-              </option>
-            </select>
+            <div className="grid3 roleOptionGrid">
+              {STAKEHOLDER_LIST.map((roleItem) => {
+                const active = form.role === roleItem.key;
+                return (
+                  <button
+                    key={roleItem.key}
+                    type="button"
+                    className={`roleOption ${active ? "roleOptionActive" : ""}`}
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        role: roleItem.key,
+                      }))
+                    }
+                  >
+                    <span className="roleOptionIcon" aria-hidden="true">
+                      {roleItem.icon}
+                    </span>
+                    <span className="roleOptionLabel">{roleItem.label}</span>
+                  </button>
+                );
+              })}
+            </div>
             <p className="text-sm mt-1 text-gray-500">
-              {form.role === "client"
-                ? "Client account: post jobs, review proposals, and hire."
-                : form.role === "admin"
-                  ? "Admin account: manage users, jobs, and platform activity."
-                  : "Freelancer account: browse jobs and submit proposals."}
+              {selectedRoleDescription}
             </p>
           </div>
 
