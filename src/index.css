@@ -375,6 +375,9 @@ select.input:focus {
   color: #664a35;
   border: 1px solid transparent;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   transition: all 140ms ease;
 }
 
@@ -390,6 +393,11 @@ select.input:focus {
   color: #7d4f2b;
   font-weight: 600;
   box-shadow: inset 3px 0 0 #8b5e34;
+}
+
+.navLinkIcon {
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 .appShell {

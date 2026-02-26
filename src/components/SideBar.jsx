@@ -8,7 +8,7 @@ export default function SideBar() {
 
   const linksByRole = {
     Client: [
-      { to: "/client/dashboard", label: "Dashboard" },
+      { to: "/client/dashboard", label: "Dashboard", icon: "📊" },
       { to: "/client/jobs", label: "My Jobs" },
       { to: "/client/proposals", label: "Proposals" },
       { to: "/client/contracts", label: "Contracts" },
@@ -17,7 +17,7 @@ export default function SideBar() {
       { to: "/client/reviews", label: "Reviews" },
     ],
     Freelancer: [
-      { to: "/freelancer/dashboard", label: "Dashboard" },
+      { to: "/freelancer/dashboard", label: "Dashboard", icon: "📊" },
       { to: "/freelancer/browse", label: "Browse Jobs" },
       { to: "/freelancer/proposals", label: "My Proposals" },
       { to: "/freelancer/contracts", label: "Contracts" },
@@ -26,7 +26,7 @@ export default function SideBar() {
       { to: "/freelancer/reviews", label: "Reviews" },
     ],
     Admin: [
-      { to: "/admin/dashboard", label: "Dashboard" },
+      { to: "/admin/dashboard", label: "Dashboard", icon: "📊" },
       { to: "/admin/users", label: "Users" },
       { to: "/admin/jobs", label: "Jobs" },
       { to: "/admin/proposals", label: "Proposals" },
@@ -63,7 +63,10 @@ export default function SideBar() {
               isActive ? "navLink navLinkActive" : "navLink"
             }
           >
-            {link.label}
+            {link.icon && (
+              <span className="navLinkIcon" aria-hidden="true">{link.icon}</span>
+            )}
+            <span>{link.label}</span>
           </NavLink>
         ))}
       </nav>
