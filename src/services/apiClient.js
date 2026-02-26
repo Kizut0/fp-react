@@ -1,7 +1,25 @@
 import axios from "axios";
 
+const normalizeBaseURL = (rawUrl) => {
+  if (!rawUrl) {
+    return "/api";
+  }
+
+  const trimmed = String(rawUrl).trim().replace(/\/+$/, "");
+
+  if (!trimmed) {
+    return "/api";
+  }
+
+  if (trimmed.endsWith("/api")) {
+    return trimmed;
+  }
+
+  return `${trimmed}/api`;
+};
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "/api",
+  baseURL: normalizeBaseURL(import.meta.env.VITE_API_URL),
   withCredentials: true,
 });
 
