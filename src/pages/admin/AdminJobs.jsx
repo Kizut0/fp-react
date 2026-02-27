@@ -120,11 +120,25 @@ export default function AdminJobs() {
                                             className="btn"
                                             disabled={
                                                 busyId === (j._id || j.jobId) ||
-                                                !["draft", "open", "cancelled"].includes(normalizeStatus(j.status))
+                                                !["draft", "open", "cancelled", "hidden", "flagged"].includes(normalizeStatus(j.status))
                                             }
                                             onClick={() => toggleStatus(j)}
                                         >
                                             {normalizeStatus(j.status) === "open" ? "Cancel" : "Set Open"}
+                                        </button>
+                                        <button
+                                            className="btn btnDanger"
+                                            disabled={busyId === (j._id || j.jobId) || normalizeStatus(j.status) === "hidden"}
+                                            onClick={() => jobService.update(j._id || j.jobId, { status: "hidden" }).then(load)}
+                                        >
+                                            Hide
+                                        </button>
+                                        <button
+                                            className="btn btnDanger"
+                                            disabled={busyId === (j._id || j.jobId) || normalizeStatus(j.status) === "flagged"}
+                                            onClick={() => jobService.update(j._id || j.jobId, { status: "flagged" }).then(load)}
+                                        >
+                                            Flag
                                         </button>
                                         <button className="btn btnDanger" disabled={busyId === (j._id || j.jobId)} onClick={() => removeJob(j)}>
                                             Delete

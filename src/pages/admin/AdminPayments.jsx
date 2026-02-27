@@ -238,6 +238,21 @@ export default function AdminPayments() {
                       >
                         Refund
                       </button>
+                      <button
+                        type="button"
+                        className="btn btnDanger"
+                        disabled={busy}
+                        onClick={async () => {
+                          if (!window.confirm("Void/Delete this payment? This cannot be undone.")) return;
+                          setBusyId(id);
+                          try {
+                            await paymentService.remove(id);
+                            await load();
+                          } finally { setBusyId(""); }
+                        }}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>

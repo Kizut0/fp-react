@@ -78,4 +78,9 @@ export const paymentService = {
     });
     return data;
   },
+
+  async remove(id) {
+    const { data } = await apiClient.delete(`${endpoints.PAYMENTS}?id=${id}`);
+    return data;
+  },
 };

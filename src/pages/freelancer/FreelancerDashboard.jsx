@@ -68,15 +68,28 @@ export default function FreelancerDashboard() {
 
     const submitted = proposals.filter((item) => normalizeStatus(item.status) === "submitted").length;
     const accepted = proposals.filter((item) => normalizeStatus(item.status) === "accepted").length;
-    const successRate = proposals.length > 0 ? Math.round((accepted / proposals.length) * 100) : 0;
+
+    // Prefer the backend pre-calculated success rate, fallback to local calc
+    const successRate = typeof data?.proposalSuccessRate === "number"
+        ? Math.round(data.proposalSuccessRate * 100)
+        : (proposals.length > 0 ? Math.round((accepted / proposals.length) * 100) : 0);
+
     const activeContracts = contracts.filter((item) => normalizeStatus(item.status) === "active").length;
     const completedContracts = contracts.filter((item) => normalizeStatus(item.status) === "completed").length;
     const paidTotal = payments
         .filter((item) => isSettledPaymentStatus(normalizePaymentStatus(item.status || item.paymentStatus, "unknown")))
         .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const avgRating = reviews.length > 0
+
+    // Prefer backend avgRating, fallback to calculated
+    const computedAvgRating = reviews.length > 0
         ? (reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length).toFixed(1)
-        : data?.avgRating || "-";
+        : "-";
+    const avgRating = data?.avgRating && data.avgRating !== "-" ? data.avgRating : computedAvgRating;
+
+    // Correctly parse category objects from backend
+    const categoriesDisplay = (data?.popularCategories || [])
+        .map(c => typeof c === 'object' ? c.category : c)
+        .join(", ") || "-";
 
     return (
         <div className="row">
@@ -102,7 +115,7 @@ export default function FreelancerDashboard() {
             <div className="grid3">
                 <StatCard label="Avg Rating" value={avgRating} />
                 <StatCard label="Total Reviews" value={reviews.length} />
-                <StatCard label="Popular Job Categories" value={(data?.popularCategories || []).join(", ") || "-"} />
+                <StatCard label="Popular Job Categories (Platform)" value={categoriesDisplay} />
             </div>
 
             <div className="card">

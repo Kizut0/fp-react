@@ -86,8 +86,8 @@ export default function ClientDashboard() {
 
       <div className="grid3">
         <StatCard label="Jobs Posted" value={dashboard?.postedJobs ?? 0} />
-        <StatCard label="Open Proposals" value={summary.submitted} />
-        <StatCard label="Accepted Proposals" value={summary.accepted} />
+        <StatCard label="Proposals Received" value={dashboard?.proposalsReceived ?? summary.submitted} />
+        <StatCard label="Hiring Success Rate" value={`${Math.round((dashboard?.hiringSuccessRate || 0) * 100)}%`} />
       </div>
 
       <div className="grid3">
@@ -95,6 +95,20 @@ export default function ClientDashboard() {
         <StatCard label="Payments Logged" value={dashboard?.paidCount ?? payments.length} />
         <StatCard label="Paid Out (Recorded)" value={formatMoney(summary.paidTotal)} />
       </div>
+
+      {dashboard?.engagementTrends && dashboard.engagementTrends.length > 0 && (
+        <div className="card">
+          <div className="h2">Freelancer Engagement Trends</div>
+          <div className="muted">Proposals received over recent months.</div>
+          <div style={{ marginTop: 12, display: "flex", gap: 16 }}>
+            {dashboard.engagementTrends.map(t => (
+              <div key={t.month} className="badge">
+                {t.month}: {t.proposals} proposals
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="h2">Quick Actions</div>
