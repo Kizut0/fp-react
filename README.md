@@ -1,11 +1,22 @@
-# Freelance Hub Frontend (`fp-react`)
+# Freelance Link Frontend (`fp-react`)
 
-React + Vite frontend for the Freelance Hub platform.  
-This app handles role-based UI for:
+Frontend implementation for the project:
+**"Freelance Link: A Web-Based Freelancer Hiring Platform for Clients and Freelancers"**
+
+This repository contains the React web client used by:
 - Public users
 - Clients
 - Freelancers
 - Admins
+
+## Project Goal
+Build a simple, structured, and user-friendly freelancer platform focused on core marketplace flows:
+- Job posting and job management
+- Proposal submission and hiring
+- Contract tracking
+- Payment tracking
+- Review and rating
+- Admin monitoring and moderation
 
 ## Tech Stack
 - React 19
@@ -13,12 +24,12 @@ This app handles role-based UI for:
 - Axios
 - Vite 7
 - ESLint
-- Docker + Nginx (production image)
+- Docker + Nginx
 
-## Main Features
-- Login and registration (client/freelancer)
-- Role-based routing and protected pages
-- Client workspace:
+## Frontend Scope
+- Authentication pages (Login / Register)
+- Role-based protected routes
+- Client pages:
   - Dashboard
   - My Jobs
   - Proposals
@@ -26,7 +37,7 @@ This app handles role-based UI for:
   - Job Complete
   - Payments
   - Reviews
-- Freelancer workspace:
+- Freelancer pages:
   - Dashboard
   - Browse Jobs
   - My Proposals
@@ -34,7 +45,7 @@ This app handles role-based UI for:
   - Job Complete
   - Payments
   - Reviews
-- Admin workspace:
+- Admin pages:
   - Dashboard
   - Users
   - Jobs
@@ -46,11 +57,11 @@ This app handles role-based UI for:
 ## Project Structure
 ```txt
 src/
-  app/           # App routes and app entry
-  components/    # Shared UI components (shell, navbar, sidebar, guards)
-  contexts/      # Auth context
-  constants/     # Shared constants
-  services/      # API services (axios client + endpoint modules)
+  app/           # routes and app entry
+  components/    # shared UI components
+  contexts/      # auth context/provider
+  constants/     # shared constants
+  services/      # API services and axios client
   pages/
     auth/
     public/
@@ -67,7 +78,6 @@ VITE_API_URL=https://freelance.southeastasia.cloudapp.azure.com
 ```
 
 Optional:
-
 ```env
 VITE_FORCE_ABSOLUTE_API_URL=false
 VITE_API_TIMEOUT_MS=15000
@@ -75,32 +85,42 @@ VITE_API_PROXY_TARGET=http://127.0.0.1:3000
 ```
 
 Notes:
-- In local dev (`127.0.0.1`/`localhost`), frontend uses `/api` proxy by default.
-- For deployed HTTPS frontend, use HTTPS API URLs to avoid mixed-content blocking.
+- Local development uses `/api` proxy (`vite.config.js`).
+- In HTTPS deployment, use HTTPS API URL to avoid mixed-content errors.
 
-## Run Locally
+## Local Development
 ```bash
 cd fp-react
 pnpm install
 pnpm dev
 ```
 
-App URL:
+Frontend URL:
 - `http://127.0.0.1:5173`
 
-## Available Scripts
+## Scripts
 ```bash
-pnpm dev       # start dev server
-pnpm build     # production build
-pnpm preview   # preview production build
-pnpm lint      # lint code
+pnpm dev       # run Vite dev server
+pnpm build     # build production bundle
+pnpm preview   # preview production bundle
+pnpm lint      # run ESLint
 ```
 
+## Docker
+Build:
+```bash
+docker build -t frontend:1.0 .
+```
+
+Run:
+```bash
+docker run -d --name frontend-server -p 8080:80 frontend:1.0
+```
 
 ## Team Members
 - Aung Myat Oo Gyaw (6726066)  
-  GitHub: [Kizut0](https://github.com/Kizut0)
+  Github: [Kizut0](https://github.com/Kizut0)
 - Mi Hsu Myat Win Myint (6726115)  
-  GitHub: [hsumyatwin-myint](https://github.com/hsumyatwin-myint)
+  Github: [hsumyatwin-myint](https://github.com/hsumyatwin-myint)
 - Su Eain Dray Myint (6726094)  
-  GitHub: [u6726094-dot](https://github.com/u6726094-dot)
+  Github: [u6726094-dot](https://github.com/u6726094-dot)
