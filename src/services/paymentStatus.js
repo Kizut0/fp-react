@@ -2,6 +2,7 @@ const PAYMENT_STATUS_ALIASES = {
   hold: "reserved",
   pending: "in_review",
   paid: "released",
+  completed: "released",
 };
 
 const KNOWN_PAYMENT_STATUSES = new Set([
