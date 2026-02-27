@@ -29,6 +29,10 @@ function normalizeChangeOrderStatus(value) {
   return String(value || "pending").trim().toLowerCase();
 }
 
+function normalizeEscalationStatus(value) {
+  return String(value || "open").trim().toLowerCase();
+}
+
 function getMilestoneChangeOrders(contract, milestoneKey) {
   const key = normalizeMilestoneKey(milestoneKey);
   const orders = Array.isArray(contract?.changeOrders) ? contract.changeOrders : [];
@@ -40,6 +44,36 @@ function getMilestoneChangeOrders(contract, milestoneKey) {
       const rightTime = new Date(right?.updatedAt || right?.requestedAt || 0).getTime();
       return rightTime - leftTime;
     });
+}
+
+function getMilestoneEscalations(contract, milestoneKey) {
+  const key = normalizeMilestoneKey(milestoneKey);
+  const escalations = Array.isArray(contract?.escalations) ? contract.escalations : [];
+  return escalations
+    .filter((item) => normalizeMilestoneKey(item?.milestoneKey) === key)
+    .slice()
+    .sort((left, right) => {
+      const leftTime = new Date(left?.updatedAt || left?.openedAt || 0).getTime();
+      const rightTime = new Date(right?.updatedAt || right?.openedAt || 0).getTime();
+      return rightTime - leftTime;
+    });
+}
+
+function formatSlaLabel(sla = {}) {
+  if (!sla || typeof sla !== "object") return "-";
+  const dueState = String(sla.dueState || "").toLowerCase();
+  if (!sla.dueDate) return "No due date";
+  if (dueState === "escalated") {
+    return `Escalated - ${Number(sla.overdueDays || 0)}d overdue`;
+  }
+  if (dueState === "overdue") {
+    return `Overdue - ${Number(sla.overdueDays || 0)}d`;
+  }
+  if (dueState === "due_soon") {
+    return `Due soon - ${Number(sla.dueInHours || 0)}h left`;
+  }
+  if (dueState === "closed") return "Closed";
+  return `On track - ${Number(sla.dueInDays || 0)}d left`;
 }
 
 function formatDateInput(value) {
@@ -56,6 +90,8 @@ function getMilestones(contract) {
       key: normalizeMilestoneKey(milestone?.key || milestone?.milestoneKey || `milestone-${index + 1}`),
       title: String(milestone?.title || `Milestone ${index + 1}`),
       status: String(milestone?.status || "").toLowerCase(),
+      dueDate: milestone?.dueDate || null,
+      sla: milestone?.sla || {},
       completionRequest: milestone?.completionRequest || {},
     }));
   }
@@ -67,6 +103,8 @@ function getMilestones(contract) {
         contract?.completionRequest?.milestoneTitle || contract?.jobTitle || contract?.jobId || "Milestone"
       ),
       status: String(contract?.completionRequest?.milestoneStatus || contract?.status || "pending").toLowerCase(),
+      dueDate: null,
+      sla: {},
       completionRequest: contract?.completionRequest || {},
     },
   ];
@@ -114,6 +152,9 @@ export default function FreelancerJobComplete() {
       const contractState = String(item.status || "active").toLowerCase();
       getMilestones(item).forEach((milestone) => {
         const changeOrders = getMilestoneChangeOrders(item, milestone.key);
+        const escalations = getMilestoneEscalations(item, milestone.key);
+        const openEscalation =
+          escalations.find((entry) => normalizeEscalationStatus(entry?.status) === "open") || null;
         const pendingChangeOrder =
           changeOrders.find((order) => normalizeChangeOrderStatus(order?.status) === "pending") || null;
         const latestChangeOrder = changeOrders[0] || null;
@@ -127,9 +168,12 @@ export default function FreelancerJobComplete() {
           milestoneKey: milestone.key,
           milestoneTitle: milestone.title || milestone.key,
           milestoneState: String(milestone.status || "pending").toLowerCase(),
+          milestoneDueDate: milestone.dueDate || null,
+          milestoneSla: milestone.sla || {},
           reqState: requestStatus(milestone),
           pendingChangeOrder,
           latestChangeOrder,
+          openEscalation,
         });
       });
     });
@@ -304,6 +348,47 @@ export default function FreelancerJobComplete() {
     }
   };
 
+  const openEscalation = async (item) => {
+    if (!item?.contractId || !item?.milestoneKey) return;
+    const reason = window.prompt("Escalation reason (minimum 10 characters):", "") || "";
+    if (!reason.trim()) return;
+
+    const actionKey = `${item.contractId}::${item.milestoneKey}::esc-open`;
+    setBusyKey(actionKey);
+    setError("");
+    try {
+      await contractService.openEscalation(item.contractId, {
+        milestoneKey: item.milestoneKey,
+        reason: reason.trim(),
+        level: String(item.milestoneSla?.breachLevel || "").toLowerCase() === "critical" ? "critical" : "warning",
+      });
+      await load();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const cancelEscalation = async (item) => {
+    const escalationId = String(item?.openEscalation?.id || item?.milestoneSla?.escalationId || "").trim();
+    if (!item?.contractId || !item?.milestoneKey || !escalationId) return;
+    if (!window.confirm("Cancel this escalation?")) return;
+
+    const note = window.prompt("Cancellation note (optional):", "") || "";
+    const actionKey = `${item.contractId}::${item.milestoneKey}::esc-cancel`;
+    setBusyKey(actionKey);
+    setError("");
+    try {
+      await contractService.cancelEscalation(item.contractId, escalationId, note.trim());
+      await load();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusyKey("");
+    }
+  };
+
   if (loading) return <Loading />;
 
   return (
@@ -319,7 +404,7 @@ export default function FreelancerJobComplete() {
         <div className="card">
           <div className="h2">Submit Completed Work</div>
           <div className="muted" style={{ marginBottom: 10 }}>
-            {selectedItem?.jobTitle || "Job"} • {selectedItem?.milestoneTitle || "Milestone"}
+            {selectedItem?.jobTitle || "Job"} - {selectedItem?.milestoneTitle || "Milestone"}
           </div>
           {selectedRejected && (
             <div className="bg-yellow-100 text-yellow-800 p-3 rounded mb-3">
@@ -396,17 +481,21 @@ export default function FreelancerJobComplete() {
               <th>Contract</th>
               <th>Milestone State</th>
               <th>Request</th>
+              <th>Due</th>
+              <th>SLA</th>
               <th>Submitted</th>
               <th>Client Feedback</th>
+              <th>Escalation</th>
               <th>Change Order</th>
-              <th style={{ width: 320 }}>Actions</th>
+              <th style={{ width: 380 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {milestoneRows.map((item) => {
               const actionKey = `${item.contractId}::${item.milestoneKey}`;
               const changeOrderBusy = busyKey.startsWith(`${actionKey}::co-`);
-              const rowBusy = busyKey === actionKey || changeOrderBusy;
+              const escalationBusy = busyKey.startsWith(`${actionKey}::esc-`);
+              const rowBusy = busyKey === actionKey || changeOrderBusy || escalationBusy;
               const canSubmit =
                 item.contractState === "active" &&
                 item.milestoneState !== "released" &&
@@ -418,6 +507,13 @@ export default function FreelancerJobComplete() {
                 item.milestoneState !== "cancelled" &&
                 item.reqState !== "pending" &&
                 !item.pendingChangeOrder;
+              const openEscalationId = String(item.openEscalation?.id || item.milestoneSla?.escalationId || "").trim();
+              const canEscalate =
+                item.contractState === "active" &&
+                item.milestoneState !== "released" &&
+                item.milestoneState !== "cancelled" &&
+                item.milestoneSla?.isOverdue &&
+                !openEscalationId;
               const submitLabel = item.reqState === "rejected" ? "Resubmit Work" : "Submit Work";
               return (
                 <tr key={actionKey}>
@@ -432,8 +528,26 @@ export default function FreelancerJobComplete() {
                   <td><span className="badge">{item.contractState}</span></td>
                   <td><span className="badge">{item.milestoneState.replace("_", " ")}</span></td>
                   <td><span className="badge">{item.reqState.replace("_", " ")}</span></td>
+                  <td>{formatDate(item.milestoneDueDate)}</td>
+                  <td>
+                    <span className="badge">{formatSlaLabel(item.milestoneSla)}</span>
+                  </td>
                   <td>{formatDate(item.milestone?.completionRequest?.submittedAt)}</td>
                   <td style={{ whiteSpace: "pre-wrap" }}>{item.milestone?.completionRequest?.clientFeedback || "-"}</td>
+                  <td style={{ whiteSpace: "pre-wrap" }}>
+                    {openEscalationId ? (
+                      <>
+                        <span className="badge">
+                          {normalizeEscalationStatus(item.openEscalation?.status)} - {item.openEscalation?.level || "warning"}
+                        </span>
+                        <div className="muted" style={{ marginTop: 4 }}>
+                          {item.openEscalation?.reason || "-"}
+                        </div>
+                      </>
+                    ) : item.milestoneSla?.escalationEligible ? (
+                      <span className="badge">Eligible</span>
+                    ) : "-"}
+                  </td>
                   <td style={{ whiteSpace: "pre-wrap" }}>
                     {item.latestChangeOrder ? (
                       <>
@@ -481,13 +595,31 @@ export default function FreelancerJobComplete() {
                         Cancel Change
                       </button>
                     ) : null}
+                    <button
+                      type="button"
+                      className="btn btnWarn"
+                      style={{ marginLeft: 8 }}
+                      disabled={!canEscalate || rowBusy}
+                      onClick={() => openEscalation(item)}
+                    >
+                      Escalate
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ marginLeft: 8 }}
+                      disabled={!openEscalationId || rowBusy}
+                      onClick={() => cancelEscalation(item)}
+                    >
+                      Cancel Esc.
+                    </button>
                   </td>
                 </tr>
               );
             })}
             {milestoneRows.length === 0 && (
               <tr>
-                <td colSpan="10" className="muted">No milestones available.</td>
+                <td colSpan="13" className="muted">No milestones available.</td>
               </tr>
             )}
           </tbody>

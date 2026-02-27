@@ -53,4 +53,29 @@ export const paymentService = {
     });
     return data;
   },
+
+  async addEvidence({ paymentId = "", contractId = "", milestoneKey = "", evidence = [], note = "" } = {}) {
+    const { data } = await apiClient.patch(endpoints.PAYMENTS, {
+      action: "evidence",
+      ...(paymentId ? { paymentId } : {}),
+      ...(contractId ? { contractId } : {}),
+      ...(milestoneKey ? { milestoneKey } : {}),
+      evidence,
+      note,
+    });
+    return data;
+  },
+
+  async mediate({ paymentId = "", contractId = "", milestoneKey = "", stage = "", note = "", slaHours } = {}) {
+    const { data } = await apiClient.patch(endpoints.PAYMENTS, {
+      action: "mediate",
+      ...(paymentId ? { paymentId } : {}),
+      ...(contractId ? { contractId } : {}),
+      ...(milestoneKey ? { milestoneKey } : {}),
+      stage,
+      note,
+      ...(slaHours !== undefined ? { slaHours } : {}),
+    });
+    return data;
+  },
 };

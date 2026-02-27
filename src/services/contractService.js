@@ -130,4 +130,30 @@ export const contractService = {
     });
     return data;
   },
+
+  async openEscalation(id, payload = {}) {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/escalations`, {
+      action: "open",
+      ...payload,
+    });
+    return data;
+  },
+
+  async resolveEscalation(id, escalationId, resolutionNote = "") {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/escalations`, {
+      action: "resolve",
+      escalationId,
+      resolutionNote,
+    });
+    return data;
+  },
+
+  async cancelEscalation(id, escalationId, resolutionNote = "") {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/escalations`, {
+      action: "cancel",
+      escalationId,
+      resolutionNote,
+    });
+    return data;
+  },
 };
