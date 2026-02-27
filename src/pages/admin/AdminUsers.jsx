@@ -113,7 +113,7 @@ export default function AdminUsers() {
         <div className="row">
             <div className="card">
                 <div className="h1">User Management</div>
-                <div className="muted">Verify/block/remove accounts.</div>
+                <div className="muted">Verify, block, or archive accounts.</div>
             </div>
 
             <ErrorBox error={err} />
@@ -185,7 +185,7 @@ export default function AdminUsers() {
                                         >
                                             Deactivate
                                         </button>
-                                        <ConfirmButton confirmMessage="Remove this account?" onConfirm={() => remove(id)}>Delete</ConfirmButton>
+                                        <ConfirmButton confirmMessage="Archive and deactivate this account?" onConfirm={() => remove(id)}>Archive</ConfirmButton>
                                     </td>
                                 </tr>
                             );

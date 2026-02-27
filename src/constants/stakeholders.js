@@ -1,4 +1,4 @@
-const STAKEHOLDER_LIST = [
+const STAKEHOLDER_META_LIST = [
   {
     key: "freelancer",
     label: "Freelancer",
@@ -19,6 +19,10 @@ const STAKEHOLDER_LIST = [
   },
 ];
 
+const STAKEHOLDER_LIST = STAKEHOLDER_META_LIST.filter(
+  (item) => item.key !== "admin"
+);
+
 function normalizeStakeholderRole(value) {
   const raw = String(value || "").trim().toLowerCase();
   if (raw === "freelance") return "freelancer";
@@ -28,7 +32,7 @@ function normalizeStakeholderRole(value) {
 function getStakeholderMeta(role) {
   const normalized = normalizeStakeholderRole(role);
   return (
-    STAKEHOLDER_LIST.find((item) => item.key === normalized) || {
+    STAKEHOLDER_META_LIST.find((item) => item.key === normalized) || {
       key: normalized || "workspace",
       label: String(role || "Workspace"),
       icon: "👤",
@@ -37,4 +41,4 @@ function getStakeholderMeta(role) {
   );
 }
 
-export { STAKEHOLDER_LIST, normalizeStakeholderRole, getStakeholderMeta };
+export { STAKEHOLDER_LIST, STAKEHOLDER_META_LIST, normalizeStakeholderRole, getStakeholderMeta };

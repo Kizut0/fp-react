@@ -59,7 +59,12 @@ export default function Login() {
     } catch (err) {
       const apiMessage = err.response?.data?.message;
       const apiField = String(err.response?.data?.field || "").trim();
-      const fallback = apiMessage || err.message || "Login failed";
+      const fallback =
+        apiMessage ||
+        (err.code === "ECONNABORTED"
+          ? "Login request timed out. Please try again."
+          : err.message) ||
+        "Login failed";
 
       if (apiField === "email") {
         setFieldErrors((prev) => ({ ...prev, email: fallback }));
@@ -137,4 +142,3 @@ export default function Login() {
     </div>
   );
 }
-

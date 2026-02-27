@@ -1,16 +1,39 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { authService } from "../services/authService";
-
-const AuthContext = createContext(null);
 
 const LS_TOKEN = "fl_token";
 const LS_USER = "fl_user";
 
-export function AuthProvider({ children }) {
-    const [user, setUser] = useState(() => {
+const fallbackAuthValue = {
+    user: null,
+    token: "",
+    isLoading: false,
+    login: async () => {
+        throw new Error("Auth provider is unavailable.");
+    },
+    register: async () => {
+        throw new Error("Auth provider is unavailable.");
+    },
+    logout: () => {},
+};
+
+const AuthContext = createContext(fallbackAuthValue);
+
+function readStoredUser() {
+    try {
         const raw = localStorage.getItem(LS_USER);
-        return raw ? JSON.parse(raw) : null;
-    });
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+        localStorage.removeItem(LS_USER);
+        return null;
+    }
+}
+
+export function AuthProvider({ children }) {
+    const [user, setUser] = useState(readStoredUser);
     const [token, setToken] = useState(() => localStorage.getItem(LS_TOKEN) || "");
     const [isLoading, setIsLoading] = useState(true);
 
@@ -70,7 +93,7 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-    return useContext(AuthContext);
+    return useContext(AuthContext) || fallbackAuthValue;
 }
 
 // helper for api client

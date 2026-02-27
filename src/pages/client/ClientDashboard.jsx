@@ -6,6 +6,7 @@ import StatCard from "../../components/StatCard";
 import { contractService } from "../../services/contractService";
 import { dashboardService } from "../../services/dashboardService";
 import { paymentService } from "../../services/paymentService";
+import { isSettledPaymentStatus, normalizePaymentStatus } from "../../services/paymentStatus";
 import { proposalService } from "../../services/proposalService";
 
 function toArray(data) {
@@ -66,7 +67,7 @@ export default function ClientDashboard() {
     const accepted = proposals.filter((item) => normalizeStatus(item.status) === "accepted").length;
     const activeContracts = contracts.filter((item) => normalizeStatus(item.status) === "active").length;
     const paidTotal = payments
-      .filter((item) => normalizeStatus(item.status || item.paymentStatus) === "paid")
+      .filter((item) => isSettledPaymentStatus(normalizePaymentStatus(item.status || item.paymentStatus, "unknown")))
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     return { submitted, accepted, activeContracts, paidTotal };

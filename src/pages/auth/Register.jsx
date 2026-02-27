@@ -77,12 +77,7 @@ export default function Register() {
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password,
-        role:
-          String(form.role || "").toLowerCase() === "client"
-            ? "Client"
-            : String(form.role || "").toLowerCase() === "admin"
-              ? "Admin"
-              : "Freelancer",
+        role: String(form.role || "").toLowerCase() === "client" ? "Client" : "Freelancer",
       });
 
       navigate("/login");

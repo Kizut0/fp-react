@@ -4,6 +4,7 @@ import Loading from "../../components/Loading";
 import ErrorBox from "../../components/ErrorBox";
 import StatCard from "../../components/StatCard";
 import { adminService } from "../../services/adminService";
+import { isSettledPaymentStatus, normalizePaymentStatus } from "../../services/paymentStatus";
 
 function toArray(data) {
     if (Array.isArray(data)) return data;
@@ -104,7 +105,7 @@ export default function AdminDashboard() {
     const activeContracts = contracts.filter((item) => normalizeStatus(item.status) === "active").length;
     const completedContracts = contracts.filter((item) => normalizeStatus(item.status) === "completed").length;
     const paidTotal = payments
-        .filter((item) => normalizeStatus(item.status || item.paymentStatus) === "paid")
+        .filter((item) => isSettledPaymentStatus(normalizePaymentStatus(item.status || item.paymentStatus, "unknown")))
         .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     const recentMonths = getLastNMonths(6);

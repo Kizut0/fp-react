@@ -95,4 +95,39 @@ export const contractService = {
     });
     return data;
   },
+
+  async requestChangeOrder(id, payload) {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/change-orders`, {
+      action: "request",
+      ...payload,
+    });
+    return data;
+  },
+
+  async approveChangeOrder(id, changeOrderId, decisionNote = "") {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/change-orders`, {
+      action: "approve",
+      changeOrderId,
+      decisionNote,
+    });
+    return data;
+  },
+
+  async rejectChangeOrder(id, changeOrderId, decisionNote = "") {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/change-orders`, {
+      action: "reject",
+      changeOrderId,
+      decisionNote,
+    });
+    return data;
+  },
+
+  async cancelChangeOrder(id, changeOrderId, decisionNote = "") {
+    const { data } = await apiClient.patch(`${endpoints.CONTRACTS}/${id}/change-orders`, {
+      action: "cancel",
+      changeOrderId,
+      decisionNote,
+    });
+    return data;
+  },
 };

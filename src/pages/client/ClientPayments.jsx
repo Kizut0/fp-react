@@ -4,6 +4,7 @@ import ErrorBox from "../../components/ErrorBox";
 import Loading from "../../components/Loading";
 import { contractService } from "../../services/contractService";
 import { paymentService } from "../../services/paymentService";
+import { normalizePaymentStatus } from "../../services/paymentStatus";
 
 function toArray(data) {
   if (Array.isArray(data)) return data;
@@ -13,11 +14,6 @@ function toArray(data) {
 
 function normalizeId(value) {
   return String(value || "").trim();
-}
-
-function normalizeStatus(value, fallback = "unknown") {
-  const raw = String(value || fallback).trim().toLowerCase();
-  return raw || fallback;
 }
 
 function formatStatusLabel(value) {
@@ -54,7 +50,7 @@ function getContractKey(contract) {
 }
 
 function getPaymentStatus(payment) {
-  return normalizeStatus(payment?.status || payment?.paymentStatus, "unknown");
+  return normalizePaymentStatus(payment?.status || payment?.paymentStatus, "unknown");
 }
 
 function getPaymentDate(payment) {
@@ -62,7 +58,7 @@ function getPaymentDate(payment) {
 }
 
 function getDisputeStatus(payment) {
-  return normalizeStatus(payment?.dispute?.status, "none");
+  return String(payment?.dispute?.status || "none").trim().toLowerCase() || "none";
 }
 
 function hasOpenDispute(payment) {
@@ -73,8 +69,7 @@ function hasOpenDispute(payment) {
 
 function canClientDispute(payment) {
   const status = getPaymentStatus(payment);
-  if (!["hold", "pending", "disputed"].includes(status)) return false;
-  if (status === "disputed" && hasOpenDispute(payment)) return false;
+  if (!["reserved", "in_review", "released", "disputed"].includes(status)) return false;
   return !hasOpenDispute(payment);
 }
 
@@ -101,7 +96,7 @@ const DEFAULT_FORM = {
   contractId: "",
   freelancerId: "",
   amount: "",
-  status: "pending",
+  status: "reserved",
   note: "",
 };
 
@@ -151,12 +146,20 @@ export default function ClientPayments() {
   }, [contracts]);
 
   const activeContracts = useMemo(
-    () => contracts.filter((contract) => normalizeStatus(contract?.status, "active") !== "cancelled"),
+    () => contracts.filter((contract) => String(contract?.status || "active").toLowerCase() !== "cancelled"),
     [contracts]
   );
 
   const stats = useMemo(() => {
-    const out = { hold: 0, pending: 0, paid: 0, failed: 0, disputed: 0, refunded: 0 };
+    const out = {
+      reserved: 0,
+      in_review: 0,
+      released: 0,
+      withdrawn: 0,
+      failed: 0,
+      disputed: 0,
+      refunded: 0,
+    };
     payments.forEach((payment) => {
       const status = getPaymentStatus(payment);
       if (out[status] !== undefined) out[status] += 1;
@@ -232,7 +235,7 @@ export default function ClientPayments() {
       const contractId = normalizeId(form.contractId);
       const freelancerId = normalizeId(form.freelancerId);
       const amount = Number(form.amount);
-      const status = normalizeStatus(form.status, "paid");
+      const status = normalizePaymentStatus(form.status, "reserved");
       const note = String(form.note || "").trim();
 
       if (!contractId) throw new Error("Contract is required.");
@@ -347,10 +350,8 @@ export default function ClientPayments() {
                 value={form.status}
                 onChange={(e) => updateForm("status", e.target.value)}
               >
-                <option value="paid">Paid</option>
-                <option value="pending">Pending</option>
-                <option value="hold">Hold</option>
-                <option value="failed">Failed</option>
+                <option value="reserved">Reserved</option>
+                <option value="in_review">In Review</option>
               </select>
             </div>
           </div>
@@ -389,7 +390,7 @@ export default function ClientPayments() {
       <div className="card">
         <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
           <div className="muted">
-            Total: {payments.length} • Hold: {stats.hold} • Pending: {stats.pending} • Disputed: {stats.disputed} • Paid: {stats.paid} • Refunded: {stats.refunded}
+            Total: {payments.length} • Reserved: {stats.reserved} • In Review: {stats.in_review} • Disputed: {stats.disputed} • Released: {stats.released} • Withdrawn: {stats.withdrawn} • Refunded: {stats.refunded}
           </div>
           <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
             <input
@@ -401,9 +402,10 @@ export default function ClientPayments() {
             />
             <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="all">All status</option>
-              <option value="hold">Hold</option>
-              <option value="paid">Paid</option>
-              <option value="pending">Pending</option>
+              <option value="reserved">Reserved</option>
+              <option value="in_review">In Review</option>
+              <option value="released">Released</option>
+              <option value="withdrawn">Withdrawn</option>
               <option value="failed">Failed</option>
               <option value="disputed">Disputed</option>
               <option value="refunded">Refunded</option>

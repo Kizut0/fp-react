@@ -3,11 +3,10 @@ import Loading from "../../components/Loading";
 import ErrorBox from "../../components/ErrorBox";
 import { adminService } from "../../services/adminService";
 import { paymentService } from "../../services/paymentService";
-
-function normalizeStatus(value, fallback = "unknown") {
-  const raw = String(value || fallback).trim().toLowerCase();
-  return raw || fallback;
-}
+import {
+  isSettledPaymentStatus,
+  normalizePaymentStatus,
+} from "../../services/paymentStatus";
 
 function formatStatusLabel(value) {
   return String(value || "")
@@ -30,13 +29,13 @@ function formatDateTime(value) {
 }
 
 function getDisputeStatus(payment) {
-  return normalizeStatus(payment?.dispute?.status, "none");
+  return String(payment?.dispute?.status || "none").trim().toLowerCase() || "none";
 }
 
 function hasOpenDispute(payment) {
   const disputeStatus = getDisputeStatus(payment);
   if (disputeStatus === "open") return true;
-  return normalizeStatus(payment?.status || payment?.paymentStatus) === "disputed";
+  return normalizePaymentStatus(payment?.status || payment?.paymentStatus, "unknown") === "disputed";
 }
 
 function renderDisputeInfo(payment) {
@@ -86,11 +85,20 @@ export default function AdminPayments() {
   }, []);
 
   const totals = useMemo(() => {
-    const out = { hold: 0, pending: 0, paid: 0, failed: 0, disputed: 0, refunded: 0, amount: 0 };
+    const out = {
+      reserved: 0,
+      in_review: 0,
+      released: 0,
+      withdrawn: 0,
+      failed: 0,
+      disputed: 0,
+      refunded: 0,
+      amount: 0,
+    };
     items.forEach((item) => {
-      const status = normalizeStatus(item.status || item.paymentStatus);
+      const status = normalizePaymentStatus(item.status || item.paymentStatus, "unknown");
       if (out[status] !== undefined) out[status] += 1;
-      if (status === "paid") out.amount += Number(item.amount || 0);
+      if (isSettledPaymentStatus(status)) out.amount += Number(item.amount || 0);
     });
     return out;
   }, [items]);
@@ -98,7 +106,7 @@ export default function AdminPayments() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((item) => {
-      const status = normalizeStatus(item.status || item.paymentStatus);
+      const status = normalizePaymentStatus(item.status || item.paymentStatus, "unknown");
       if (statusFilter !== "all" && status !== statusFilter) return false;
       if (!q) return true;
 
@@ -161,7 +169,7 @@ export default function AdminPayments() {
       <div className="card">
         <div className="flex justify-between items-center" style={{ gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
           <div className="muted">
-            Total: {items.length} • Hold: {totals.hold} • Pending: {totals.pending} • Disputed: {totals.disputed} • Paid: {totals.paid} • Refunded: {totals.refunded} • Paid volume: {formatMoney(totals.amount)}
+            Total: {items.length} • Reserved: {totals.reserved} • In Review: {totals.in_review} • Disputed: {totals.disputed} • Released: {totals.released} • Withdrawn: {totals.withdrawn} • Refunded: {totals.refunded} • Settled volume: {formatMoney(totals.amount)}
           </div>
           <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
             <input
@@ -173,9 +181,10 @@ export default function AdminPayments() {
             />
             <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="all">All status</option>
-              <option value="hold">Hold</option>
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
+              <option value="reserved">Reserved</option>
+              <option value="in_review">In Review</option>
+              <option value="released">Released</option>
+              <option value="withdrawn">Withdrawn</option>
               <option value="failed">Failed</option>
               <option value="disputed">Disputed</option>
               <option value="refunded">Refunded</option>
@@ -200,6 +209,7 @@ export default function AdminPayments() {
               const id = String(p._id || p.paymentId || "").trim();
               const isOpenDispute = hasOpenDispute(p);
               const busy = busyId === id;
+              const status = normalizePaymentStatus(p.status || p.paymentStatus, "unknown");
 
               return (
                 <tr key={id || `${p.contractId}-${p.clientId}-${p.freelancerId}`}>
@@ -207,7 +217,7 @@ export default function AdminPayments() {
                   <td>{p.clientName || p.clientId}</td>
                   <td>{p.freelancerName || p.freelancerId}</td>
                   <td>{formatMoney(p.amount)}</td>
-                  <td><span className="badge">{formatStatusLabel(normalizeStatus(p.status || p.paymentStatus))}</span></td>
+                  <td><span className="badge">{formatStatusLabel(status)}</span></td>
                   <td style={{ whiteSpace: "pre-wrap" }}>{renderDisputeInfo(p)}</td>
                   <td className="muted">{formatDateTime(p.createdAt || p.paymentDate || p.updatedAt)}</td>
                   <td>

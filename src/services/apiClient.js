@@ -18,9 +18,28 @@ const normalizeBaseURL = (rawUrl) => {
   return `${trimmed}/api`;
 };
 
+const isLocalRuntime = () => {
+  if (typeof window === "undefined") return false;
+  const host = String(window.location?.hostname || "").toLowerCase();
+  return host === "127.0.0.1" || host === "localhost";
+};
+
+const resolveBaseURL = () => {
+  const forceAbsolute = String(import.meta.env.VITE_FORCE_ABSOLUTE_API_URL || "")
+    .trim()
+    .toLowerCase() === "true";
+
+  if (isLocalRuntime() && !forceAbsolute) {
+    return "/api";
+  }
+
+  return normalizeBaseURL(import.meta.env.VITE_API_URL);
+};
+
 const apiClient = axios.create({
-  baseURL: normalizeBaseURL(import.meta.env.VITE_API_URL),
+  baseURL: resolveBaseURL(),
   withCredentials: true,
+  timeout: Number(import.meta.env.VITE_API_TIMEOUT_MS || 15000),
 });
 
 apiClient.interceptors.request.use(
@@ -39,6 +58,12 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.code === "ECONNABORTED") {
+      error.message = "Request timed out. Please check your connection and try again.";
+    } else if (!error.response && error.message === "Network Error") {
+      error.message = "Cannot reach server. Please check API URL/CORS and try again.";
+    }
+
     const status = error.response?.status;
     const requestUrl = String(error.config?.url || "");
     const isLoginOrRegisterRequest =

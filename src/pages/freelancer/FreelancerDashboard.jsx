@@ -6,6 +6,7 @@ import StatCard from "../../components/StatCard";
 import { contractService } from "../../services/contractService";
 import { dashboardService } from "../../services/dashboardService";
 import { paymentService } from "../../services/paymentService";
+import { isSettledPaymentStatus, normalizePaymentStatus } from "../../services/paymentStatus";
 import { proposalService } from "../../services/proposalService";
 import { reviewService } from "../../services/reviewService";
 
@@ -71,7 +72,7 @@ export default function FreelancerDashboard() {
     const activeContracts = contracts.filter((item) => normalizeStatus(item.status) === "active").length;
     const completedContracts = contracts.filter((item) => normalizeStatus(item.status) === "completed").length;
     const paidTotal = payments
-        .filter((item) => normalizeStatus(item.status || item.paymentStatus) === "paid")
+        .filter((item) => isSettledPaymentStatus(normalizePaymentStatus(item.status || item.paymentStatus, "unknown")))
         .reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const avgRating = reviews.length > 0
         ? (reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length).toFixed(1)
