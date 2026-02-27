@@ -96,26 +96,6 @@ pnpm preview   # preview production build
 pnpm lint      # lint code
 ```
 
-## Docker
-Build image:
-```bash
-docker build -t frontend:1.0 .
-```
-
-Run container:
-```bash
-docker run -d --name frontend-server -p 8080:80 frontend:1.0
-```
-
-## Troubleshooting
-- `Port 5173 is already in use`
-  - Stop the process using that port, or run Vite on another port.
-- `Network Error` on login/register
-  - Check backend is running.
-  - Check API URL/proxy configuration.
-  - Check browser console for CORS or mixed-content errors.
-- Mixed content error (`https` page calling `http` API)
-  - Set API URL to HTTPS and rebuild frontend.
 
 ## Team Members
 - Aung Myat Oo Gyaw (6726066)  
