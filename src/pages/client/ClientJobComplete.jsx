@@ -309,172 +309,184 @@ export default function ClientJobComplete() {
 
   return (
     <div className="row">
-      <div className="card">
-        <div className="h1">Job Complete</div>
-        <div className="muted">Review freelancer delivery and accept or reject submitted work.</div>
+      <div className="card shadow-sm mb-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="h1">Review Deliverables</div>
+            <div className="muted">Review freelancer delivery and accept or reject submitted work.</div>
+          </div>
+          <button className="btn btnOk" onClick={load}>Refresh List</button>
+        </div>
       </div>
 
       <ErrorBox message={error} />
 
-      <div className="card">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Job</th>
-              <th>Milestone</th>
-              <th>Freelancer</th>
-              <th>Contract</th>
-              <th>Request</th>
-              <th>Due</th>
-              <th>SLA</th>
-              <th>Submitted</th>
-              <th>Delivery</th>
-              <th>Notes</th>
-              <th>Escalation</th>
-              <th>Change Order</th>
-              <th style={{ width: 360 }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((item) => {
-              const key = `${item.contractId}::${item.milestoneKey}`;
-              const pending = item.reqState === "pending";
-              const pendingChangeOrderId = String(item.pendingChangeOrder?.id || "").trim();
-              const changeOrderBusyKey = `${item.contractId}::${pendingChangeOrderId}::co`;
-              const openEscalationId = String(item.openEscalation?.id || item.milestoneSla?.escalationId || "").trim();
-              const escalationBusy = busyKey.startsWith(`${item.contractId}::${item.milestoneKey}::esc-`);
-              const canEscalate =
-                item.contractState === "active" &&
-                item.milestoneStatus !== "released" &&
-                item.milestoneStatus !== "cancelled" &&
-                item.milestoneSla?.isOverdue &&
-                !openEscalationId;
+      <div className="grid gap-4">
+        {filtered.map((item) => {
+          const key = `${item.contractId}::${item.milestoneKey}`;
+          const isPending = item.reqState === "pending";
+          const pendingChangeOrderId = String(item.pendingChangeOrder?.id || "").trim();
+          const changeOrderBusyKey = `${item.contractId}::${pendingChangeOrderId}::co`;
+          const openEscalationId = String(item.openEscalation?.id || item.milestoneSla?.escalationId || "").trim();
+          const escalationBusy = busyKey.startsWith(`${item.contractId}::${item.milestoneKey}::esc-`);
+          const canEscalate =
+            item.contractState === "active" &&
+            item.milestoneStatus !== "released" &&
+            item.milestoneStatus !== "cancelled" &&
+            item.milestoneSla?.isOverdue &&
+            !openEscalationId;
 
-              return (
-                <tr key={key}>
-                  <td>{item.jobTitle}</td>
-                  <td>
-                    {item.milestoneTitle}
-                    <div className="muted" style={{ marginTop: 4 }}>
-                      key: {item.milestoneKey}
-                    </div>
-                  </td>
-                  <td>{item.freelancer}</td>
-                  <td><span className="badge">{item.contractState}</span></td>
-                  <td>
-                    <span className="badge">{item.reqState.replace("_", " ")}</span>
-                    <div className="muted" style={{ marginTop: 4 }}>
-                      {item.milestoneStatus.replace("_", " ")}
-                    </div>
-                  </td>
-                  <td>{formatDate(item.milestoneDueDate)}</td>
-                  <td>
-                    <span className="badge">{formatSlaLabel(item.milestoneSla)}</span>
-                  </td>
-                  <td>{formatDate(item.completionRequest?.submittedAt)}</td>
-                  <td>
-                    {item.completionRequest?.link ? (
-                      <div>
-                        <a href={item.completionRequest.link} target="_blank" rel="noreferrer">
-                          Work Link
-                        </a>
-                      </div>
-                    ) : null}
-                    {item.completionRequest?.attachment?.name ? (
-                      <div>
-                        <a
-                          href={item.completionRequest.attachment.dataUrl}
-                          download={item.completionRequest.attachment.name}
-                        >
-                          {item.completionRequest.attachment.name}
-                        </a>
-                      </div>
-                    ) : null}
-                    {!item.completionRequest?.link && !item.completionRequest?.attachment?.name ? "-" : null}
-                  </td>
-                  <td style={{ whiteSpace: "pre-wrap" }}>
-                    {item.completionRequest?.notes || item.completionRequest?.clientFeedback || "-"}
-                  </td>
-                  <td style={{ whiteSpace: "pre-wrap" }}>
+          return (
+            <div key={key} className="card hover-shadow transition-all border-l-4"
+              style={{ borderLeftColor: isPending ? 'var(--warn)' : 'var(--success)' }}>
+
+              {/* Header: Identity */}
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <span className="badge mb-2" style={{ backgroundColor: 'rgba(0,0,0,0.05)', color: '#666' }}>
+                    Job: {item.jobTitle}
+                  </span>
+                  <div className="h2">{item.milestoneTitle}</div>
+                  <div className="muted small">Freelancer: {item.freelancer}</div>
+                </div>
+                <div className="text-right">
+                  <span className={`badge ${isPending ? 'btnWarn' : 'btnOk'}`}>
+                    {item.reqState.replace("_", " ").toUpperCase()}
+                  </span>
+                  <div className="muted small mt-2">Key: {item.milestoneKey}</div>
+                </div>
+              </div>
+
+              {/* Data Grid: Dates and Assets */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-y py-4 my-4">
+                <div>
+                  <div className="muted small uppercase font-bold mb-1">Submitted At</div>
+                  <div>{formatDate(item.completionRequest?.submittedAt)}</div>
+                </div>
+                <div>
+                  <div className="muted small uppercase font-bold mb-1">SLA Status</div>
+                  <div className={`font-bold ${item.milestoneSla?.isOverdue ? 'text-danger' : 'text-success'}`}>
+                    {formatSlaLabel(item.milestoneSla)}
+                  </div>
+                </div>
+                <div>
+                  <div className="muted small uppercase font-bold mb-1">Work Delivery</div>
+                  <div className="flex flex-wrap gap-3">
+                    {item.completionRequest?.link && (
+                      <a href={item.completionRequest.link} target="_blank" rel="noreferrer" className="text-primary font-bold">
+                        View Work Link
+                      </a>
+                    )}
+                    {item.completionRequest?.attachment?.name && (
+                      <a href={item.completionRequest.attachment.dataUrl} download={item.completionRequest.attachment.name} className="text-success font-bold">
+                        📎 {item.completionRequest.attachment.name}
+                      </a>
+                    )}
+                    {!item.completionRequest?.link && !item.completionRequest?.attachment?.name && <span className="muted">No assets provided</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Context Sections: Notes and Flags */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <div className="muted small uppercase font-bold mb-2">Freelancer Notes</div>
+                  <div className="bg-light p-3 rounded italic text-secondary min-h-[60px]" style={{ whiteSpace: "pre-wrap" }}>
+                    {item.completionRequest?.notes || item.completionRequest?.clientFeedback || "No additional notes."}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="muted small uppercase font-bold mb-2">Management Flags</div>
+                  <div className="flex flex-col gap-2">
                     {openEscalationId ? (
-                      <>
-                        <span className="badge">
-                          {normalizeEscalationStatus(item.openEscalation?.status)} - {item.openEscalation?.level || "warning"}
-                        </span>
-                        <div className="muted" style={{ marginTop: 4 }}>
-                          {item.openEscalation?.reason || "-"}
-                        </div>
-                      </>
+                      <div className="badge btnDanger w-fit">
+                        Escalation: {item.openEscalation?.level || "warning"} ({item.openEscalation?.reason})
+                      </div>
                     ) : item.milestoneSla?.escalationEligible ? (
-                      <span className="badge">Eligible</span>
-                    ) : "-"}
-                  </td>
-                  <td style={{ whiteSpace: "pre-wrap" }}>
+                      <div className="badge btnWarn w-fit text-black">Overdue: Eligible for Escalation</div>
+                    ) : null}
+
                     {item.latestChangeOrder ? (
-                      <>
-                        <span className="badge">
-                          {normalizeChangeOrderStatus(item.latestChangeOrder.status).replace("_", " ")}
-                        </span>
-                        <div className="muted" style={{ marginTop: 4 }}>
-                          {item.latestChangeOrder.reason || "-"}
-                        </div>
-                      </>
-                    ) : "-"}
-                  </td>
-                  <td>
-                    <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+                      <div className="badge btnWarn w-fit text-black">
+                        Change Order: {normalizeChangeOrderStatus(item.latestChangeOrder.status)}
+                      </div>
+                    ) : null}
+                    {!openEscalationId && !item.latestChangeOrder && !item.milestoneSla?.escalationEligible && <span className="muted">No active issues.</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Toolbar */}
+              <div className="flex flex-wrap gap-2 justify-end pt-4 border-t">
+                {/* Completion Actions */}
+                <button
+                  type="button"
+                  className="btn btnDanger"
+                  disabled={!isPending || busyKey === key || escalationBusy}
+                  onClick={() => decide(item.contractId, item.milestoneKey, "reject")}
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  className="btn btnOk"
+                  disabled={!isPending || busyKey === key || escalationBusy}
+                  onClick={() => decide(item.contractId, item.milestoneKey, "accept")}
+                >
+                  Accept & Pay
+                </button>
+                <button
+                  type="button"
+                  className="btn btnWarn"
+                  style={{ color: 'black' }}
+                  disabled={!isPending || busyKey === key || escalationBusy}
+                  onClick={() => dispute(item.contractId, item.milestoneKey)}
+                >
+                  Dispute
+                </button>
+
+                {/* Change Order Block */}
+                {pendingChangeOrderId && (
+                  <div className="flex gap-2 ml-4 pl-4 border-l">
+                    <button
+                      type="button"
+                      className="btn btnOk"
+                      disabled={busyKey === changeOrderBusyKey}
+                      onClick={() => decideChangeOrder(item.contractId, pendingChangeOrderId, "approve")}
+                    >
+                      Approve Change
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btnDanger"
+                      disabled={busyKey === changeOrderBusyKey}
+                      onClick={() => decideChangeOrder(item.contractId, pendingChangeOrderId, "reject")}
+                    >
+                      Reject Change
+                    </button>
+                  </div>
+                )}
+
+                {/* Escalation Block */}
+                <div className="flex gap-2 ml-4 pl-4 border-l">
+                  {canEscalate && (
+                    <button
+                      type="button"
+                      className="btn btnWarn"
+                      style={{ color: 'black' }}
+                      disabled={escalationBusy}
+                      onClick={() => openEscalation(item.contractId, item.milestoneKey, item.milestoneSla)}
+                    >
+                      Escalate
+                    </button>
+                  )}
+                  {openEscalationId && (
+                    <>
                       <button
                         type="button"
                         className="btn btnOk"
-                        disabled={!pending || busyKey === key || busyKey === changeOrderBusyKey || escalationBusy}
-                        onClick={() => decide(item.contractId, item.milestoneKey, "accept")}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btnDanger"
-                        disabled={!pending || busyKey === key || busyKey === changeOrderBusyKey || escalationBusy}
-                        onClick={() => decide(item.contractId, item.milestoneKey, "reject")}
-                      >
-                        Reject
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btnWarn"
-                        disabled={!pending || busyKey === key || busyKey === changeOrderBusyKey || escalationBusy}
-                        onClick={() => dispute(item.contractId, item.milestoneKey)}
-                      >
-                        Dispute
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btnOk"
-                        disabled={!pendingChangeOrderId || busyKey === changeOrderBusyKey || busyKey === key || escalationBusy}
-                        onClick={() => decideChangeOrder(item.contractId, pendingChangeOrderId, "approve")}
-                      >
-                        Approve Change
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btnDanger"
-                        disabled={!pendingChangeOrderId || busyKey === changeOrderBusyKey || busyKey === key || escalationBusy}
-                        onClick={() => decideChangeOrder(item.contractId, pendingChangeOrderId, "reject")}
-                      >
-                        Reject Change
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btnWarn"
-                        disabled={!canEscalate || escalationBusy || busyKey === key || busyKey === changeOrderBusyKey}
-                        onClick={() => openEscalation(item.contractId, item.milestoneKey, item.milestoneSla)}
-                      >
-                        Escalate
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btnOk"
-                        disabled={!openEscalationId || escalationBusy || busyKey === key || busyKey === changeOrderBusyKey}
+                        disabled={escalationBusy}
                         onClick={() => resolveEscalation(item.contractId, item.milestoneKey, openEscalationId)}
                       >
                         Resolve Esc.
@@ -482,23 +494,25 @@ export default function ClientJobComplete() {
                       <button
                         type="button"
                         className="btn"
-                        disabled={!openEscalationId || escalationBusy || busyKey === key || busyKey === changeOrderBusyKey}
+                        disabled={escalationBusy}
                         onClick={() => cancelEscalation(item.contractId, item.milestoneKey, openEscalationId)}
                       >
                         Cancel Esc.
                       </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan="13" className="muted">No completion submissions, SLA alerts, or pending change orders.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {filtered.length === 0 && (
+          <div className="card text-center py-12 bg-light">
+            <div className="h2 muted">No Pending Submissions</div>
+            <p className="muted mt-2">All deliverables are currently up to date or waiting for freelancer submission.</p>
+          </div>
+        )}
       </div>
     </div>
   );
