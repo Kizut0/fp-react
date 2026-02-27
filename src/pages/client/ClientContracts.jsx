@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ErrorBox from "../../components/ErrorBox";
 import Loading from "../../components/Loading";
 import { contractService } from "../../services/contractService";
@@ -137,6 +137,19 @@ export default function ClientContracts() {
     setError("");
     try {
       await contractService.complete(id);
+      await load();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusyId("");
+    }
+  };
+  const reviewMilestone = async (contractId, milestoneKey, action) => {
+    setBusyId(contractId);
+    setError("");
+    try {
+      // Action will be "accept" or "reject"
+      await contractService.actionMilestone(contractId, { action, milestoneKey });
       await load();
     } catch (err) {
       setError(err);
@@ -283,59 +296,78 @@ export default function ClientContracts() {
               const status = normalizeStatus(contract.status);
 
               return (
-                <tr key={id}>
-                  <td>{contract.jobTitle || contract.jobId || "-"}</td>
-                  <td>{contract.freelancerName || contract.freelancerId || "-"}</td>
-                  <td>{formatMoney(contract.amount)}</td>
-                  <td>
-                    <span className="badge">{status}</span>
-                  </td>
-                  <td>{formatDate(contract.startDate)}</td>
-                  <td>{formatDate(contract.endDate)}</td>
-                  <td>
-                    {contract.delivery?.link ? (
-                      <div>
-                        <a href={contract.delivery.link} target="_blank" rel="noreferrer">
-                          Delivery Link
-                        </a>
+                <React.Fragment key={id}>
+                  <tr>
+                    <td>{contract.jobTitle || contract.jobId || "-"}</td>
+                    <td>{contract.freelancerName || contract.freelancerId || "-"}</td>
+                    <td>{formatMoney(contract.amount)}</td>
+                    <td><span className="badge">{status}</span></td>
+                    <td>{formatDate(contract.startDate)}</td>
+                    <td>{formatDate(contract.endDate)}</td>
+                    <td>-</td>
+                    <td>
+                      <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+                        {/* The main complete button will only work once all milestones below say "released" */}
+                        <button
+                          type="button"
+                          className="btn btnOk"
+                          disabled={status !== "active" || busyId === id}
+                          onClick={() => completeContract(id)}
+                        >
+                          Complete
+                        </button>
+                        <button
+                          type="button"
+                          className="btn"
+                          disabled={status !== "active" || busyId === id}
+                          onClick={() => cancelContract(id)}
+                        >
+                          Cancel
+                        </button>
                       </div>
-                    ) : null}
-                    {contract.delivery?.attachment?.name ? (
-                      <div>
-                        <a href={contract.delivery.attachment.dataUrl} download={contract.delivery.attachment.name}>
-                          {contract.delivery.attachment.name}
-                        </a>
-                      </div>
-                    ) : null}
-                    {contract.delivery?.notes ? (
-                      <div className="muted" style={{ maxWidth: 240, whiteSpace: "pre-wrap" }}>
-                        {contract.delivery.notes}
-                      </div>
-                    ) : null}
-                    {!contract.delivery?.link && !contract.delivery?.attachment?.name && !contract.delivery?.notes ? "-" : null}
-                  </td>
-                  <td>
-                    <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        className="btn btnOk"
-                        disabled={status !== "active" || busyId === id}
-                        onClick={() => completeContract(id)}
-                      >
-                        Complete
-                      </button>
+                    </td>
+                  </tr>
 
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={status !== "active" || busyId === id}
-                        onClick={() => cancelContract(id)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                  {/* ADD THIS NEW ROW TO SHOW MILESTONES */}
+                  <tr style={{ backgroundColor: "#fcfcfc" }}>
+                    <td colSpan="8" style={{ paddingLeft: 30 }}>
+                      <div className="muted mb-1"><strong>Project Milestones:</strong></div>
+                      {(contract.milestones || []).map((m) => (
+                        <div key={m.key} className="flex gap-3 items-center mb-1">
+                          <span>{m.title} — {formatMoney(m.amount)}</span>
+                          <span className="badge">{m.status}</span>
+
+                          {/* Show the submitted work link if it exists */}
+                          {m.completionRequest?.link && (
+                            <a href={m.completionRequest.link} target="_blank" rel="noreferrer" style={{ fontSize: "0.85rem" }}>
+                              View Delivery
+                            </a>
+                          )}
+
+                          {/* Show Accept/Reject if the milestone is under review */}
+                          {m.status === "in_review" && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => reviewMilestone(id, m.key, "accept")}
+                                className="btn btnOk" style={{ padding: "4px 8px", fontSize: "0.85rem" }}
+                                disabled={busyId === id}
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={() => reviewMilestone(id, m.key, "reject")}
+                                className="btn btnDanger" style={{ padding: "4px 8px", fontSize: "0.85rem" }}
+                                disabled={busyId === id}
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </td>
+                  </tr>
+                </React.Fragment>
               );
             })}
 

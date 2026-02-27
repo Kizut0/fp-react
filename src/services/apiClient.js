@@ -11,11 +11,42 @@ const normalizeBaseURL = (rawUrl) => {
     return "/api";
   }
 
-  if (trimmed.endsWith("/api")) {
-    return trimmed;
+  const ensureApiSuffix = (value) => (value.endsWith("/api") ? value : `${value}/api`);
+
+  if (trimmed.startsWith("/")) {
+    return ensureApiSuffix(trimmed);
   }
 
-  return `${trimmed}/api`;
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      const isHttpsPage =
+        typeof window !== "undefined" &&
+        String(window.location?.protocol || "").toLowerCase() === "https:";
+      const isLocalHost =
+        parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+
+      // Prevent mixed-content login/API failures on HTTPS deployments.
+      if (isHttpsPage && parsed.protocol === "http:" && !isLocalHost) {
+        parsed.protocol = "https:";
+      }
+
+      return ensureApiSuffix(parsed.toString().replace(/\/+$/, ""));
+    } catch {
+      return ensureApiSuffix(trimmed);
+    }
+  }
+
+  const browserProtocol =
+    typeof window !== "undefined" && String(window.location?.protocol || "").toLowerCase() === "https:"
+      ? "https://"
+      : "";
+  const localHostLike =
+    /^localhost(?::\d+)?$/i.test(trimmed) ||
+    /^127\.0\.0\.1(?::\d+)?$/i.test(trimmed);
+  const prefix = browserProtocol || (localHostLike ? "http://" : "https://");
+
+  return ensureApiSuffix(`${prefix}${trimmed}`);
 };
 
 const isLocalRuntime = () => {

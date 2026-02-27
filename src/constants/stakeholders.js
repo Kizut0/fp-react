@@ -2,19 +2,19 @@ const STAKEHOLDER_META_LIST = [
   {
     key: "freelancer",
     label: "Freelancer",
-    icon: "🧑‍💻",
+    icon: "",
     description: "Freelancer account: browse jobs and submit proposals.",
   },
   {
     key: "client",
     label: "Client",
-    icon: "🧾",
+    icon: "",
     description: "Client account: post jobs, review proposals, and hire.",
   },
   {
     key: "admin",
     label: "Admin",
-    icon: "🛡️",
+    icon: "",
     description: "Admin account: manage users, jobs, and platform activity.",
   },
 ];
@@ -35,7 +35,7 @@ function getStakeholderMeta(role) {
     STAKEHOLDER_META_LIST.find((item) => item.key === normalized) || {
       key: normalized || "workspace",
       label: String(role || "Workspace"),
-      icon: "👤",
+      icon: "",
       description: "",
     }
   );

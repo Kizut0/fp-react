@@ -156,4 +156,23 @@ export const contractService = {
     });
     return data;
   },
+  actionMilestone: async (contractId, payload) => {
+    const token = localStorage.getItem("token"); // Adjust this to match your app's token name
+
+    const response = await fetch(`/api/contracts/${contractId}/completion`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}` // <--- This is what fixes the 401!
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.message || "Failed to process milestone");
+    }
+    return response.json();
+  },
 };
+

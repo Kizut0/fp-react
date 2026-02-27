@@ -71,11 +71,13 @@ export default function MyProposals() {
     try {
       const [proposalData, jobData] = await Promise.all([
         proposalService.list({ mine: "freelancer" }),
-        jobService.getAll({ status: "open", sort: "newest" }),
+        // Remove the status filter so it fetches draft jobs too
+        jobService.getAll({ sort: "newest" }),
       ]);
 
       setItems(toArray(proposalData));
       setJobs(toArray(jobData));
+      // ...
     } catch (err) {
       setError(err);
     } finally {

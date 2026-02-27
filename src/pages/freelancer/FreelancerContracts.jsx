@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ErrorBox from "../../components/ErrorBox";
 import Loading from "../../components/Loading";
 import { contractService } from "../../services/contractService";
@@ -40,6 +40,7 @@ export default function FreelancerContracts() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
   const [completeId, setCompleteId] = useState("");
+  const [activeMilestoneKey, setActiveMilestoneKey] = useState(""); // Add this line
   const [deliveryLink, setDeliveryLink] = useState("");
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [deliveryFile, setDeliveryFile] = useState(null);
@@ -94,8 +95,9 @@ export default function FreelancerContracts() {
     });
   }, [items, query, statusFilter]);
 
-  const openCompleteDialog = (id) => {
-    setCompleteId(id);
+  const openCompleteDialog = (contractId, milestoneKey) => {
+    setCompleteId(contractId);
+    setActiveMilestoneKey(milestoneKey); // Track which milestone we are submitting
     setDeliveryLink("");
     setDeliveryNotes("");
     setDeliveryFile(null);
@@ -104,6 +106,7 @@ export default function FreelancerContracts() {
 
   const closeCompleteDialog = () => {
     setCompleteId("");
+    setActiveMilestoneKey("");
     setDeliveryLink("");
     setDeliveryNotes("");
     setDeliveryFile(null);
@@ -143,7 +146,9 @@ export default function FreelancerContracts() {
         attachment = await toAttachment(deliveryFile);
       }
 
-      await contractService.complete(id, {
+      await contractService.actionMilestone(id, {
+        action: "submit",
+        milestoneKey: activeMilestoneKey,
         deliveryLink: trimmedLink,
         deliveryNotes: trimmedNotes,
         deliveryAttachment: attachment,
@@ -267,40 +272,45 @@ export default function FreelancerContracts() {
               const status = normalizeStatus(contract.status);
 
               return (
-                <tr key={id}>
-                  <td>{contract.jobTitle || contract.jobId || "-"}</td>
-                  <td>{contract.clientName || contract.clientId || "-"}</td>
-                  <td>{formatMoney(contract.amount)}</td>
-                  <td>
-                    <span className="badge">{status}</span>
-                  </td>
-                  <td>{formatDate(contract.startDate)}</td>
-                  <td>{formatDate(contract.endDate)}</td>
-                  <td>
-                    {contract.delivery?.link ? (
-                      <a href={contract.delivery.link} target="_blank" rel="noreferrer">
-                        Delivery Link
-                      </a>
-                    ) : "-"}
-                    {contract.delivery?.attachment?.name ? (
-                      <div>
-                        <a href={contract.delivery.attachment.dataUrl} download={contract.delivery.attachment.name}>
-                          {contract.delivery.attachment.name}
-                        </a>
-                      </div>
-                    ) : null}
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn btnOk"
-                      disabled={status !== "active" || busyId === id}
-                      onClick={() => openCompleteDialog(id)}
-                    >
-                      {busyId === id ? "Working..." : "Complete"}
-                    </button>
-                  </td>
-                </tr>
+                <React.Fragment key={id}>
+                  <tr>
+                    <td>{contract.jobTitle || contract.jobId || "-"}</td>
+                    <td>{contract.clientName || contract.clientId || "-"}</td>
+                    <td>{formatMoney(contract.amount)}</td>
+                    <td><span className="badge">{status}</span></td>
+                    <td>{formatDate(contract.startDate)}</td>
+                    <td>{formatDate(contract.endDate)}</td>
+                    <td>-</td>
+                    <td>
+                      {/* You can remove the main "Complete" button from here since it happens per-milestone now */}
+                    </td>
+                  </tr>
+
+                  {/* ADD THIS NEW ROW TO SHOW MILESTONES */}
+                  <tr style={{ backgroundColor: "#fcfcfc" }}>
+                    <td colSpan="8" style={{ paddingLeft: 30 }}>
+                      <div className="muted mb-1"><strong>Project Milestones:</strong></div>
+                      {(contract.milestones || []).map((m) => (
+                        <div key={m.key} className="flex gap-3 items-center mb-1">
+                          <span>{m.title} — {formatMoney(m.amount)}</span>
+                          <span className="badge">{m.status}</span>
+
+                          {/* Only show Submit Work button if the milestone is pending */}
+                          {(m.status === "pending" || m.status === "active") && (
+                            <button
+                              type="button"
+                              className="btn btnOk" style={{ padding: "4px 8px", fontSize: "0.85rem" }}
+                              disabled={busyId === id}
+                              onClick={() => openCompleteDialog(id, m.key)}
+                            >
+                              Submit Work
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </td>
+                  </tr>
+                </React.Fragment>
               );
             })}
 

@@ -431,18 +431,18 @@ export default function FreelancerJobComplete() {
             </div>
           </div>
           <div style={{ marginTop: 12 }}>
-              <label className="block mb-1">
-                {selectedRejected ? "Revision Notes (required)" : "Notes (optional)"}
-              </label>
-              <textarea
-                className="textarea"
-                placeholder={selectedRejected
-                  ? "Explain what you fixed based on client feedback."
-                  : "Explain what was delivered and how to verify it."}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
+            <label className="block mb-1">
+              {selectedRejected ? "Revision Notes (required)" : "Notes (optional)"}
+            </label>
+            <textarea
+              className="textarea"
+              placeholder={selectedRejected
+                ? "Explain what you fixed based on client feedback."
+                : "Explain what was delivered and how to verify it."}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
           <div className="flex gap-3" style={{ marginTop: 12 }}>
             <button
               type="button"
@@ -471,23 +471,16 @@ export default function FreelancerJobComplete() {
         </div>
       )}
 
-      <div className="card">
-        <table className="table">
+      {/* WRAP TABLE IN OVERFLOW DIV TO PREVENT PAGE BREAKING */}
+      <div className="card" style={{ overflowX: "auto" }}>
+        <table className="table" style={{ minWidth: "900px" }}>
           <thead>
             <tr>
-              <th>Job</th>
-              <th>Milestone</th>
-              <th>Client</th>
-              <th>Contract</th>
-              <th>Milestone State</th>
-              <th>Request</th>
-              <th>Due</th>
-              <th>SLA</th>
-              <th>Submitted</th>
-              <th>Client Feedback</th>
-              <th>Escalation</th>
-              <th>Change Order</th>
-              <th style={{ width: 380 }}>Actions</th>
+              <th>Job & Client</th>
+              <th>Milestone Details</th>
+              <th>Status & Feedback</th>
+              <th>Active Issues</th>
+              <th style={{ width: 180 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -496,17 +489,20 @@ export default function FreelancerJobComplete() {
               const changeOrderBusy = busyKey.startsWith(`${actionKey}::co-`);
               const escalationBusy = busyKey.startsWith(`${actionKey}::esc-`);
               const rowBusy = busyKey === actionKey || changeOrderBusy || escalationBusy;
+
               const canSubmit =
                 item.contractState === "active" &&
                 item.milestoneState !== "released" &&
                 item.milestoneState !== "cancelled" &&
                 item.reqState !== "pending";
+
               const canRequestChange =
                 item.contractState === "active" &&
                 item.milestoneState !== "released" &&
                 item.milestoneState !== "cancelled" &&
                 item.reqState !== "pending" &&
                 !item.pendingChangeOrder;
+
               const openEscalationId = String(item.openEscalation?.id || item.milestoneSla?.escalationId || "").trim();
               const canEscalate =
                 item.contractState === "active" &&
@@ -514,112 +510,136 @@ export default function FreelancerJobComplete() {
                 item.milestoneState !== "cancelled" &&
                 item.milestoneSla?.isOverdue &&
                 !openEscalationId;
+
               const submitLabel = item.reqState === "rejected" ? "Resubmit Work" : "Submit Work";
+
               return (
                 <tr key={actionKey}>
-                  <td>{item.jobTitle}</td>
+                  {/* COLUMN 1: Job & Client */}
                   <td>
-                    {item.milestoneTitle}
-                    <div className="muted" style={{ marginTop: 4 }}>
-                      key: {item.milestoneKey}
-                    </div>
+                    <strong>{item.jobTitle}</strong>
+                    <div className="muted" style={{ fontSize: "0.85rem", margin: "4px 0" }}>Client: {item.client}</div>
+                    <span className="badge">{item.contractState}</span>
                   </td>
-                  <td>{item.client}</td>
-                  <td><span className="badge">{item.contractState}</span></td>
-                  <td><span className="badge">{item.milestoneState.replace("_", " ")}</span></td>
-                  <td><span className="badge">{item.reqState.replace("_", " ")}</span></td>
-                  <td>{formatDate(item.milestoneDueDate)}</td>
+
+                  {/* COLUMN 2: Milestone Details */}
                   <td>
+                    <strong>{item.milestoneTitle}</strong>
+                    <div className="muted" style={{ fontSize: "0.85rem", margin: "4px 0" }}>
+                      Due: {formatDate(item.milestoneDueDate)}
+                    </div>
                     <span className="badge">{formatSlaLabel(item.milestoneSla)}</span>
                   </td>
-                  <td>{formatDate(item.milestone?.completionRequest?.submittedAt)}</td>
-                  <td style={{ whiteSpace: "pre-wrap" }}>{item.milestone?.completionRequest?.clientFeedback || "-"}</td>
-                  <td style={{ whiteSpace: "pre-wrap" }}>
-                    {openEscalationId ? (
-                      <>
-                        <span className="badge">
-                          {normalizeEscalationStatus(item.openEscalation?.status)} - {item.openEscalation?.level || "warning"}
-                        </span>
-                        <div className="muted" style={{ marginTop: 4 }}>
-                          {item.openEscalation?.reason || "-"}
-                        </div>
-                      </>
-                    ) : item.milestoneSla?.escalationEligible ? (
-                      <span className="badge">Eligible</span>
-                    ) : "-"}
-                  </td>
-                  <td style={{ whiteSpace: "pre-wrap" }}>
-                    {item.latestChangeOrder ? (
-                      <>
-                        <span className="badge">
-                          {normalizeChangeOrderStatus(item.latestChangeOrder.status).replace("_", " ")}
-                        </span>
-                        <div className="muted" style={{ marginTop: 4 }}>
-                          {item.latestChangeOrder.reason || "-"}
-                        </div>
-                      </>
-                    ) : "-"}
-                  </td>
+
+                  {/* COLUMN 3: Status & Feedback */}
                   <td>
-                    <button
-                      type="button"
-                      className="btn btnOk"
-                      disabled={!canSubmit || rowBusy}
-                      onClick={() => {
-                        setSelectedContractId(item.contractId);
-                        setSelectedMilestoneKey(item.milestoneKey);
-                        setLink("");
-                        setNotes("");
-                        setFile(null);
-                      }}
-                    >
-                      {submitLabel}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn"
-                      style={{ marginLeft: 8 }}
-                      disabled={!canRequestChange || rowBusy}
-                      onClick={() => requestChangeOrder(item)}
-                    >
-                      Request Change
-                    </button>
-                    {item.pendingChangeOrder ? (
+                    <div className="flex gap-2" style={{ marginBottom: 6 }}>
+                      <span className="badge">{item.milestoneState.replace("_", " ")}</span>
+                      <span className="badge">{item.reqState.replace("_", " ")}</span>
+                    </div>
+                    {item.milestone?.completionRequest?.submittedAt && (
+                      <div className="muted" style={{ fontSize: "0.85rem" }}>
+                        Submitted: {formatDate(item.milestone.completionRequest.submittedAt)}
+                      </div>
+                    )}
+                    {item.milestone?.completionRequest?.clientFeedback && (
+                      <div style={{ color: "var(--danger)", fontSize: "0.85rem", marginTop: 4, maxWidth: 220, whiteSpace: "pre-wrap" }}>
+                        Feedback: {item.milestone.completionRequest.clientFeedback}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* COLUMN 4: Issues */}
+                  <td>
+                    {openEscalationId && (
+                      <div style={{ marginBottom: 8 }}>
+                        <span className="badge btnWarn">
+                          Escalated: {item.openEscalation?.level || "warning"}
+                        </span>
+                      </div>
+                    )}
+                    {item.latestChangeOrder && (
+                      <div>
+                        <span className="badge">
+                          Change Order: {normalizeChangeOrderStatus(item.latestChangeOrder.status).replace("_", " ")}
+                        </span>
+                      </div>
+                    )}
+                    {!openEscalationId && !item.latestChangeOrder && <span className="muted">-</span>}
+                  </td>
+
+                  {/* COLUMN 5: Actions (Stacked vertically) */}
+                  <td>
+                    <div className="flex flex-col gap-2" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       <button
                         type="button"
-                        className="btn btnWarn"
-                        style={{ marginLeft: 8 }}
-                        disabled={rowBusy}
-                        onClick={() => cancelPendingChangeOrder(item)}
+                        className="btn btnOk"
+                        style={{ width: "100%", padding: "6px" }}
+                        disabled={!canSubmit || rowBusy}
+                        onClick={() => {
+                          setSelectedContractId(item.contractId);
+                          setSelectedMilestoneKey(item.milestoneKey);
+                          setLink("");
+                          setNotes("");
+                          setFile(null);
+                        }}
                       >
-                        Cancel Change
+                        {submitLabel}
                       </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="btn btnWarn"
-                      style={{ marginLeft: 8 }}
-                      disabled={!canEscalate || rowBusy}
-                      onClick={() => openEscalation(item)}
-                    >
-                      Escalate
-                    </button>
-                    <button
-                      type="button"
-                      className="btn"
-                      style={{ marginLeft: 8 }}
-                      disabled={!openEscalationId || rowBusy}
-                      onClick={() => cancelEscalation(item)}
-                    >
-                      Cancel Esc.
-                    </button>
+
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ width: "100%", padding: "6px" }}
+                        disabled={!canRequestChange || rowBusy}
+                        onClick={() => requestChangeOrder(item)}
+                      >
+                        Request Change
+                      </button>
+
+                      {item.pendingChangeOrder && (
+                        <button
+                          type="button"
+                          className="btn btnWarn"
+                          style={{ width: "100%", padding: "6px" }}
+                          disabled={rowBusy}
+                          onClick={() => cancelPendingChangeOrder(item)}
+                        >
+                          Cancel Change
+                        </button>
+                      )}
+
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          type="button"
+                          className="btn btnWarn"
+                          style={{ flex: 1, padding: "6px" }}
+                          disabled={!canEscalate || rowBusy}
+                          onClick={() => openEscalation(item)}
+                        >
+                          Escalate
+                        </button>
+
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{ flex: 1, padding: "6px" }}
+                          disabled={!openEscalationId || rowBusy}
+                          onClick={() => cancelEscalation(item)}
+                        >
+                          Cancel Esc.
+                        </button>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               );
             })}
             {milestoneRows.length === 0 && (
               <tr>
-                <td colSpan="13" className="muted">No milestones available.</td>
+                <td colSpan="5" className="muted" style={{ textAlign: "center", padding: "20px" }}>
+                  No milestones available.
+                </td>
               </tr>
             )}
           </tbody>
